@@ -1,4 +1,4 @@
-FROM php:8.2-cli
+FROM php:8.3-cli
 RUN apt-get update && apt-get install -y git curl zip unzip libpng-dev libxml2-dev libzip-dev libonig-dev && docker-php-ext-install pdo pdo_mysql gd zip bcmath mbstring xml
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 WORKDIR /app
