@@ -1,5 +1,5 @@
 [phases.build]
-cmds = ["composer install --no-dev --optimize-autoloader --ignore-platform-req=ext-gd"]
+cmds = ["composer install --no-dev --optimize-autoloader --ignore-platform-reqs"]
 
 [start]
 cmd = "php artisan migrate --force && php artisan storage:link && php artisan config:cache && php artisan route:cache && php -S 0.0.0.0:$PORT -t public"
