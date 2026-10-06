@@ -3,87 +3,40 @@
 @section('title', 'Track Order — Cojan Catering')
 
 @section('styles')
-<style>
-    .track-step {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        flex: 1;
-        position: relative;
-    }
-    .track-circle {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: .85rem;
-        font-weight: 700;
-        margin-bottom: .5rem;
-        z-index: 1;
-    }
-    .track-circle.done {
-        background: var(--green-dark);
-        color: #fff;
-    }
-    .track-circle.pending {
-        background: #f0f0f0;
-        color: #aaa;
-        border: 2px solid #ddd;
-    }
-    .track-label {
-        font-size: .72rem;
-        text-align: center;
-        color: var(--text-light);
-        max-width: 60px;
-    }
-    .track-label.done { color: var(--green-dark); font-weight: 600; }
-    .track-line {
-        flex-grow: 1;
-        height: 3px;
-        background: #ddd;
-        margin-top: -1.75rem;
-        position: relative;
-        top: 20px;
-        z-index: 0;
-    }
-    .track-line.done { background: var(--green-dark); }
-    @media (max-width: 480px) {
-        .track-circle { width: 32px; height: 32px; font-size: .75rem; }
-        .track-label { font-size: .65rem; max-width: 48px; }
-    }
-</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 @endsection
 
 @section('content')
+<div class="d-flex align-items-center gap-2 mb-1">
+    <a href="{{ route('customer.dashboard') }}"
+       style="color:var(--green-dark);text-decoration:none;font-size:.9rem;">← Back to Dashboard</a>
+</div>
 <h1 class="cj-page-title">Order Tracking</h1>
 <p class="cj-page-sub">Order #{{ $order->order_number }}</p>
 
 @php
-    $statuses = ['pending', 'confirmed', 'preparing', 'out_for_delivery', 'delivered'];
-    $currentIndex = array_search($order->status, $statuses);
+    $trackingActive = $order->delivery
+        && in_array($order->delivery->status, ['picked_up', 'in_transit'])
+        && $order->delivery->current_lat !== null
+        && $order->delivery->current_lng !== null;
 @endphp
+
+<div class="cj-card mb-3">
+    <div class="cj-card-header">Live Rider Location</div>
+    <div class="cj-card-body">
+        <div id="delivery-map" style="height:320px;border-radius:10px;{{ $trackingActive ? '' : 'display:none;' }}"></div>
+        <p id="delivery-map-updated" style="font-size:.78rem;color:var(--text-light);margin-top:.5rem;margin-bottom:0;{{ $trackingActive ? '' : 'display:none;' }}"></p>
+        <p id="delivery-map-waiting" style="color:var(--text-light);margin:0;{{ $trackingActive ? 'display:none;' : '' }}">
+            Live tracking will appear once your order is picked up.
+        </p>
+    </div>
+</div>
 
 <!-- Status Timeline -->
 <div class="cj-card mb-3">
     <div class="cj-card-header">Delivery Status</div>
     <div class="cj-card-body">
-        <div class="d-flex align-items-flex-start justify-content-between mt-2">
-            @foreach($statuses as $index => $status)
-                <div class="track-step">
-                    <div class="track-circle {{ $index <= $currentIndex ? 'done' : 'pending' }}">
-                        {{ $index <= $currentIndex ? '✓' : $index + 1 }}
-                    </div>
-                    <div class="track-label {{ $index <= $currentIndex ? 'done' : '' }}">
-                        {{ ucfirst(str_replace('_', ' ', $status)) }}
-                    </div>
-                </div>
-                @if(!$loop->last)
-                    <div class="track-line {{ $index < $currentIndex ? 'done' : '' }}"></div>
-                @endif
-            @endforeach
-        </div>
+        <x-order-timeline :order="$order" />
     </div>
 </div>
 
@@ -138,7 +91,7 @@
                         <tbody>
                             @foreach($order->orderItems as $item)
                             <tr>
-                                <td>{{ $item->menuItem->name }}</td>
+                                <td>{{ $item->displayName() }}</td>
                                 <td>{{ $item->quantity }}</td>
                                 <td>₱{{ number_format($item->subtotal, 2) }}</td>
                             </tr>
@@ -150,4 +103,58 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+    const orderId = {{ $order->id }};
+    const mapEl = document.getElementById('delivery-map');
+    const updatedEl = document.getElementById('delivery-map-updated');
+    const waitingEl = document.getElementById('delivery-map-waiting');
+    const SAN_JOSE = [12.3585, 121.0687]; // San Jose, Occidental Mindoro
+    let map = null;
+    let marker = null;
+
+    function ensureMap(lat, lng) {
+        if (map) return;
+        mapEl.style.display = 'block';
+        updatedEl.style.display = 'block';
+        waitingEl.style.display = 'none';
+        const center = (lat && lng) ? [lat, lng] : SAN_JOSE;
+        map = L.map('delivery-map').setView(center, 15);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors',
+            maxZoom: 19,
+        }).addTo(map);
+        marker = L.marker(center).addTo(map).bindPopup('Rider location');
+    }
+
+    function updateMarker(lat, lng, updatedAt) {
+        ensureMap(lat, lng);
+        marker.setLatLng([lat, lng]);
+        map.panTo([lat, lng]);
+        if (updatedAt) {
+            updatedEl.textContent = 'Last updated ' + new Date(updatedAt).toLocaleTimeString();
+        }
+    }
+
+    @if($trackingActive)
+        updateMarker(
+            {{ $order->delivery->current_lat }},
+            {{ $order->delivery->current_lng }},
+            '{{ $order->delivery->last_location_update?->toIso8601String() }}'
+        );
+    @endif
+
+    @if($order->delivery && in_array($order->delivery->status, ['picked_up', 'in_transit']))
+        if (window.Echo) {
+            window.Echo.private(`delivery.${orderId}`).listen('DeliveryLocationUpdated', (e) => {
+                updateMarker(e.lat, e.lng, e.updated_at);
+            });
+        }
+    @endif
+})();
+</script>
 @endsection

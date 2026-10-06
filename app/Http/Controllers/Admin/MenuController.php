@@ -93,6 +93,9 @@ class MenuController extends Controller
             Storage::disk('public')->delete($menuItem->image);
         }
 
+        // Soft-delete (MenuItem uses SoftDeletes) so past orders that reference this
+        // item keep working, and hide it from the customer-facing menu immediately.
+        $menuItem->update(['is_available' => false]);
         $menuItem->delete();
 
         return redirect()->route('admin.menu')->with('success', 'Menu item deleted successfully!');

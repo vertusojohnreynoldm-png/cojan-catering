@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Broadcast;
+use App\Models\Order;
 use App\Models\User;
 
 Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
@@ -9,4 +10,8 @@ Broadcast::channel('App.Models.User.{id}', function ($user, $id) {
 
 Broadcast::channel('chat.{id1}.{id2}', function (User $user, $id1, $id2) {
     return $user->id == $id1 || $user->id == $id2;
+});
+
+Broadcast::channel('delivery.{orderId}', function (User $user, $orderId) {
+    return Order::where('id', $orderId)->where('user_id', $user->id)->exists();
 });

@@ -4,13 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Delivery Dashboard — Cojan Catering</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/cojan.css') }}">
     <style>
         .cj-nav { background: #92400e; }
-        .cj-nav-brand span { color: #fbbf24; }
-        .stat-card.stat-del1 { background: linear-gradient(135deg, #d97706, #b45309); }
-        .stat-card.stat-del2 { background: linear-gradient(135deg, #16a34a, #15803d); }
+        .cj-nav-brand span { color: #E8A93B; }
+        /* Same contrast fix as .stat-amber/.stat-green in cojan.css — the
+           original lighter stops failed 4.5:1 for the small uppercase label. */
+        .stat-card.stat-del1 { background: linear-gradient(135deg, #b45309, #92400e); }
+        .stat-card.stat-del2 { background: linear-gradient(135deg, #15803d, #14532d); }
         .cj-card-header { background: #92400e; }
         .cj-table thead tr { background: #92400e; }
         .cj-table tbody tr:hover { background: #fef3c7; }
@@ -24,21 +30,13 @@
 <nav class="cj-nav">
     <a href="{{ route('delivery.dashboard') }}" class="cj-nav-brand">🚚 Cojan <span>Delivery</span></a>
     <div class="cj-nav-links">
-        <form method="POST" action="{{ route('logout') }}" class="d-inline">
-            @csrf
-            <button type="submit" class="btn-cj-amber btn-cj btn-cj-sm">Logout</button>
-        </form>
+        <button type="button" class="btn-cj-amber btn-cj btn-cj-sm" data-bs-toggle="modal" data-bs-target="#logoutModal">Logout</button>
     </div>
 </nav>
+<x-logout-modal />
+<x-toast />
 
 <div class="cj-page">
-    @if(session('success'))
-        <div class="alert-cj alert-success">✅ {{ session('success') }}</div>
-    @endif
-    @if(session('error'))
-        <div class="alert-cj alert-danger">❌ {{ session('error') }}</div>
-    @endif
-
     <h1 class="cj-page-title">Welcome, {{ auth()->user()->name }}!</h1>
     <p class="cj-page-sub">Your delivery assignments for today</p>
 
@@ -59,7 +57,7 @@
 
     <!-- Scan QR -->
     <div class="scan-box">
-        <h5>🔍 Find Order by Number</h5>
+        <h5><i class="bi bi-search"></i> Find Order by Number</h5>
         <form method="POST" action="{{ route('delivery.scan') }}" class="d-flex gap-2">
             @csrf
             <input type="text" name="order_number" class="cj-input" placeholder="Enter order number (e.g. ORD-XXXXXXXX)" style="max-width:400px">

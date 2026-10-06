@@ -46,9 +46,34 @@ class ChatController extends Controller
             'receiver_id' => 'required|exists:users,id',
         ]);
 
+        $sender = Auth::user();
+
+        if ($sender->role === 'customer') {
+            // Customers can only ever message support — ignore whatever receiver_id
+            // the client sent and use the same admin lookup as customerMessages().
+            $admin = $this->getAdmin();
+
+            if (!$admin) {
+                abort(403, 'No admin is available to receive messages.');
+            }
+
+            $receiverId = $admin->id;
+        } elseif ($sender->role === 'admin') {
+            $receiver = User::find($request->receiver_id);
+
+            if (!$receiver || $receiver->role !== 'customer') {
+                abort(403, 'You can only message customers.');
+            }
+
+            $receiverId = $receiver->id;
+        } else {
+            // No chat UI exists for the delivery role today.
+            abort(403, 'Chat is not available for your account.');
+        }
+
         $message = Message::create([
             'sender_id'   => Auth::id(),
-            'receiver_id' => $request->receiver_id,
+            'receiver_id' => $receiverId,
             'body'        => $request->body,
         ]);
 

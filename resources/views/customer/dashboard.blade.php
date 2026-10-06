@@ -8,14 +8,14 @@
         background: white;
         border-radius: 16px;
         padding: 1.75rem;
-        border: 1px solid rgba(26,92,56,.08);
-        box-shadow: 0 4px 16px rgba(26,92,56,.07);
+        border: 1px solid rgba(122,46,29,.08);
+        box-shadow: 0 4px 16px rgba(122,46,29,.07);
         transition: all .25s ease;
         height: 100%;
         display: flex;
         flex-direction: column;
     }
-    .dash-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(26,92,56,.14); }
+    .dash-card:hover { transform: translateY(-4px); box-shadow: 0 12px 36px rgba(122,46,29,.14); }
     .dash-icon { font-size: 2.4rem; margin-bottom: 1rem; }
     .dash-card h5 { font-family: 'Playfair Display', serif; font-size: 1.15rem; color: var(--green-dark); margin-bottom: .4rem; }
     .dash-card p { font-size: .85rem; color: var(--text-light); flex: 1; margin-bottom: 1rem; }
@@ -77,7 +77,7 @@
             <div class="dash-icon">👤</div>
             <h5>My Profile</h5>
             <p>Update your delivery address and contact information for faster checkout.</p>
-            <a href="#" class="btn-cj btn-cj">View Profile</a>
+            <a href="{{ route('customer.profile.edit') }}" class="btn-cj btn-cj">View Profile</a>
         </div>
     </div>
 </div>

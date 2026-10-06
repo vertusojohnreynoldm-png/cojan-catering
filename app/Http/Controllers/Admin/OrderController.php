@@ -11,7 +11,10 @@ class OrderController extends Controller
 {
     public function index(Request $request)
     {
-        $query = Order::with('user')->orderBy('created_at', 'desc');
+        // Catering Bookings (the Avail flow) have their own dedicated list —
+        // see Admin\BookingController — so this stays scoped to regular
+        // menu-item orders only.
+        $query = Order::regularOrders()->with('user')->orderBy('created_at', 'desc');
 
         if ($request->status) {
             $query->where('status', $request->status);
@@ -24,9 +27,10 @@ class OrderController extends Controller
 
     public function show($id)
     {
-        $order = Order::with('user', 'orderItems.menuItem', 'delivery')->findOrFail($id);
+        $order = Order::with('user', 'orderItems.menuItem', 'orderItems.package', 'delivery')->findOrFail($id);
+        $deliveryPersonnel = User::where('role', 'delivery')->get();
 
-        return view('admin.order-detail', compact('order'));
+        return view('admin.order-detail', compact('order', 'deliveryPersonnel'));
     }
 
     public function updateStatus(Request $request, $id)
@@ -40,6 +44,15 @@ class OrderController extends Controller
 
         return redirect()->route('admin.orders.show', $id)
             ->with('success', 'Order status updated successfully!');
+    }
+
+    public function markPaymentPaid($id)
+    {
+        $order = Order::findOrFail($id);
+        $order->update(['payment_status' => 'paid']);
+
+        return redirect()->route('admin.orders.show', $id)
+            ->with('success', 'Payment marked as paid!');
     }
 
     public function assignDelivery(Request $request, $id)

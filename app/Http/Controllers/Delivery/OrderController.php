@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Delivery;
 
+use App\Events\DeliveryLocationUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Delivery;
 use App\Models\Order;
@@ -12,7 +13,7 @@ class OrderController extends Controller
     public function show($id)
     {
         $delivery = Delivery::where('user_id', auth()->id())
-            ->with('order.user', 'order.orderItems.menuItem')
+            ->with('order.user', 'order.orderItems.menuItem', 'order.orderItems.package')
             ->findOrFail($id);
 
         return view('delivery.order-detail', compact('delivery'));
@@ -42,6 +43,33 @@ class OrderController extends Controller
 
         return redirect()->route('delivery.orders.show', $id)
             ->with('success', 'Delivery status updated successfully!');
+    }
+
+    public function updateLocation(Request $request, $id)
+    {
+        $request->validate([
+            'lat' => 'required|numeric|between:-90,90',
+            'lng' => 'required|numeric|between:-180,180',
+        ]);
+
+        $delivery = Delivery::where('user_id', auth()->id())->findOrFail($id);
+
+        if (!in_array($delivery->status, ['picked_up', 'in_transit'], true)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Location updates are only accepted while a delivery is out for delivery.',
+            ], 422);
+        }
+
+        $delivery->update([
+            'current_lat'          => $request->lat,
+            'current_lng'          => $request->lng,
+            'last_location_update' => now(),
+        ]);
+
+        broadcast(new DeliveryLocationUpdated($delivery))->toOthers();
+
+        return response()->json(['success' => true]);
     }
 
     public function scan(Request $request)

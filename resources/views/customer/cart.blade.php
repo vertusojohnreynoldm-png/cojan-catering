@@ -3,7 +3,15 @@
 @section('title', 'Cart — Cojan Catering')
 
 @section('content')
+<x-breadcrumbs :items="['Menu' => route('customer.menu'), 'Cart' => null]" />
 <h1 class="cj-page-title">My Cart</h1>
+
+@if(!empty($cart) && $hasMenuItems && !$orderingOpen)
+    <div class="alert-cj alert-warning mb-3">
+        <i class="bi bi-clock-history"></i>
+        <span>We're currently closed — you can keep browsing, but checkout for menu items reopens at 7:30 AM.</span>
+    </div>
+@endif
 
 @if(empty($cart))
     <div class="cj-card mt-3">
@@ -30,17 +38,28 @@
                     <tbody>
                         @foreach($cart as $id => $item)
                         <tr>
-                            <td><strong>{{ $item['name'] }}</strong></td>
+                            <td>
+                                <strong>{{ $item['name'] }}</strong>
+                                @if(($item['type'] ?? 'menu') === 'package')
+                                    <br><small style="color:var(--text-light);">{{ $item['pax'] }} pax package</small>
+                                @endif
+                            </td>
                             <td>₱{{ number_format($item['price'], 2) }}</td>
                             <td>
                                 <form method="POST" action="{{ route('customer.cart.update', $id) }}"
-                                      class="d-flex gap-1 align-items-center">
+                                      x-data="{ qty: {{ $item['quantity'] }} }">
                                     @csrf
-                                    <input type="number" name="quantity" value="{{ $item['quantity'] }}"
-                                           min="1"
-                                           style="width:60px;border:1.5px solid #ddd;border-radius:8px;
-                                                  padding:4px 8px;font-size:.85rem;">
-                                    <button type="submit" class="btn-cj btn-cj-sm">OK</button>
+                                    <input type="hidden" name="quantity" :value="qty">
+                                    <div class="cj-stepper cj-stepper-sm">
+                                        <button type="button" class="cj-stepper-btn"
+                                                @click="qty = Math.max(0, qty - 1); $nextTick(() => $el.closest('form').submit())"
+                                                :title="qty <= 1 ? 'Remove item' : 'Decrease quantity'"
+                                                :aria-label="qty <= 1 ? 'Remove item' : 'Decrease quantity'">−</button>
+                                        <span class="cj-stepper-value" x-text="qty" aria-live="polite"></span>
+                                        <button type="button" class="cj-stepper-btn"
+                                                @click="qty++; $nextTick(() => $el.closest('form').submit())"
+                                                aria-label="Increase quantity">+</button>
+                                    </div>
                                 </form>
                             </td>
                             <td>₱{{ number_format($item['price'] * $item['quantity'], 2) }}</td>

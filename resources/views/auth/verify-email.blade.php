@@ -20,12 +20,11 @@
             </div>
         </form>
 
-        <form method="POST" action="{{ route('logout') }}">
-            @csrf
-
-            <button type="submit" class="underline text-sm text-gray-600 hover:text-gray-900 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                {{ __('Log Out') }}
-            </button>
-        </form>
+        <button type="button" class="cj-auth-link" style="background:none;border:none;padding:0;cursor:pointer;"
+                data-bs-toggle="modal" data-bs-target="#logoutModal">
+            {{ __('Log Out') }}
+        </button>
     </div>
+
+    <x-logout-modal />
 </x-guest-layout>

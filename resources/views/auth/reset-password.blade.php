@@ -1,4 +1,8 @@
 <x-guest-layout>
+    <a href="{{ route('login') }}" class="cj-auth-back-pill">
+        <i class="bi bi-arrow-left"></i> {{ __('Back to Login') }}
+    </a>
+
     <form method="POST" action="{{ route('password.store') }}">
         @csrf
 

@@ -3,6 +3,7 @@
 @section('title', 'My Orders — Cojan Catering')
 
 @section('content')
+<x-breadcrumbs :items="['My Orders' => null]" />
 <h1 class="cj-page-title">My Orders</h1>
 
 @if($orders->isEmpty())
@@ -35,9 +36,7 @@
                             <td>{{ $order->created_at->format('M d, Y') }}</td>
                             <td>₱{{ number_format($order->total_amount, 2) }}</td>
                             <td>
-                                <span class="badge-cj badge-{{ $order->status === 'delivered' ? 'delivered' : ($order->status === 'cancelled' ? 'cancelled' : ($order->status === 'out_for_delivery' ? 'delivery' : ($order->status === 'preparing' ? 'preparing' : ($order->status === 'confirmed' ? 'confirmed' : 'pending')))) }}">
-                                    {{ ucfirst(str_replace('_', ' ', $order->status)) }}
-                                </span>
+                                <x-order-status-badge :order="$order" />
                             </td>
                             <td>
                                 <span class="badge-cj {{ $order->payment_status == 'paid' ? 'badge-delivered' : 'badge-pending' }}">

@@ -4,25 +4,16 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard — Cojan Catering</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="{{ asset('favicon-32x32.png') }}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{{ asset('favicon-16x16.png') }}">
+    <link rel="apple-touch-icon" href="{{ asset('apple-touch-icon.png') }}">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/cojan.css') }}">
 </head>
 <body>
-<nav class="cj-nav">
-    <a href="{{ route('admin.dashboard') }}" class="cj-nav-brand">🍽 Cojan <span>Admin</span></a>
-    <div class="cj-nav-links">
-        <a href="{{ route('admin.orders') }}" class="btn-cj-outline btn-cj btn-cj-sm">Orders</a>
-        <a href="{{ route('admin.menu') }}" class="btn-cj-outline btn-cj btn-cj-sm">Menu</a>
-        <a href="{{ route('admin.inventory') }}" class="btn-cj-outline btn-cj btn-cj-sm">Inventory</a>
-        <a href="{{ route('admin.analytics') }}" class="btn-cj-outline btn-cj btn-cj-sm">Analytics</a>
-        <a href="{{ route('admin.feedback') }}" class="btn-cj-outline btn-cj btn-cj-sm">Feedback</a>
-        <a href="{{ route('admin.users') }}" class="btn-cj-outline btn-cj btn-cj-sm">Users</a>
-        <form method="POST" action="{{ route('logout') }}" class="d-inline">
-            @csrf
-            <button type="submit" class="btn-cj-amber btn-cj btn-cj-sm">Logout</button>
-        </form>
-    </div>
-</nav>
+<x-admin-nav />
+<x-toast />
 
 <div class="cj-page">
     <h1 class="cj-page-title">Welcome back, {{ auth()->user()->name }}!</h1>
@@ -82,9 +73,12 @@
                             <td>{{ $order->user->name }}</td>
                             <td>₱{{ number_format($order->total_amount, 2) }}</td>
                             <td>
-                                <span class="badge-cj badge-{{ $order->status === 'delivered' ? 'delivered' : ($order->status === 'cancelled' ? 'cancelled' : ($order->status === 'out_for_delivery' ? 'delivery' : ($order->status === 'preparing' ? 'preparing' : ($order->status === 'confirmed' ? 'confirmed' : 'pending')))) }}">
-                                    {{ ucfirst(str_replace('_', ' ', $order->status)) }}
-                                </span>
+                                <div class="d-flex align-items-center gap-1 flex-wrap">
+                                    <x-order-status-badge :order="$order" />
+                                    @if($order->isBooking())
+                                        <span class="badge-cj badge-booking-type">📦 Booking</span>
+                                    @endif
+                                </div>
                             </td>
                             <td>{{ $order->created_at->format('M d, Y') }}</td>
                             <td>
@@ -107,59 +101,101 @@
 <meta name="csrf-token" content="{{ csrf_token() }}">
 
 <!-- ========== ADMIN CHAT PANEL ========== -->
-<div id="admin-chat-btn" onclick="toggleAdminChat()"
+<style>
+/* Bubble icon morph (chat <-> close) and panel expand — state values apply
+   regardless of motion preference; only the smooth transition/animation
+   itself is gated below, so reduced-motion users get an instant snap. */
+.cj-bubble-icon {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cj-icon-chat { transform: rotate(0deg); opacity: 1; }
+.cj-icon-close { transform: rotate(-90deg); opacity: 0; }
+#admin-chat-btn.cj-chat-open .cj-icon-chat { transform: rotate(90deg); opacity: 0; }
+#admin-chat-btn.cj-chat-open .cj-icon-close { transform: rotate(0deg); opacity: 1; }
+
+#admin-chat-panel {
+    transform-origin: bottom right;
+    transform: scale(0.85) translateY(10px);
+    opacity: 0;
+}
+#admin-chat-panel.cj-panel-open {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .cj-bubble-icon { transition: transform .25s ease, opacity .25s ease; }
+    #admin-chat-panel { transition: transform .28s ease-out, opacity .28s ease-out; }
+
+    #admin-chat-btn.cj-bubble-pop { animation: cjBubblePop .38s cubic-bezier(0.34, 1.56, 0.64, 1); }
+    @keyframes cjBubblePop {
+        0%   { transform: scale(1); }
+        40%  { transform: scale(0.9); }
+        70%  { transform: scale(1.08); }
+        100% { transform: scale(1); }
+    }
+
+    #admin-chat-btn.cj-bubble-idle { animation: cjBubblePulse 2.8s ease-in-out infinite; }
+    @keyframes cjBubblePulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 4px 20px rgba(0,0,0,0.25); }
+        50%      { transform: scale(1.04); box-shadow: 0 4px 20px rgba(0,0,0,0.25), 0 0 0 8px rgba(193,68,30,.18); }
+    }
+}
+</style>
+<button type="button" id="admin-chat-btn" onclick="toggleAdminChat()" class="cj-bubble-idle"
+    aria-haspopup="dialog" aria-expanded="false" aria-label="Open customer messages"
     style="position:fixed;bottom:28px;right:28px;z-index:9999;
-           width:58px;height:58px;border-radius:50%;cursor:pointer;
-           background:linear-gradient(135deg,#1a5c38,#2d8653);
+           width:58px;height:58px;border-radius:50%;cursor:pointer;border:none;padding:0;font:inherit;
+           background:linear-gradient(135deg,#7A2E1D,#C1441E);
            box-shadow:0 4px 20px rgba(0,0,0,0.25);
            display:flex;align-items:center;justify-content:center;">
-    <span style="color:#fff;font-size:1.5rem;">💬</span>
-    <span id="admin-badge"
+    <span class="cj-bubble-icon cj-icon-chat" style="color:#fff;font-size:1.5rem;" aria-hidden="true">💬</span>
+    <span class="cj-bubble-icon cj-icon-close" style="color:#fff;font-size:1.5rem;" aria-hidden="true">✕</span>
+    <span id="admin-badge" aria-hidden="true"
           style="display:none;position:absolute;top:2px;right:2px;
                  background:#e74c3c;color:#fff;border-radius:50%;
                  width:18px;height:18px;font-size:11px;font-weight:700;
                  align-items:center;justify-content:center;">0</span>
-</div>
+</button>
 
 <div id="admin-chat-panel"
     style="display:none;position:fixed;top:0;right:0;width:360px;height:100vh;
            z-index:9998;background:#fff;box-shadow:-4px 0 24px rgba(0,0,0,0.15);
            flex-direction:column;">
     <!-- Header -->
-    <div style="background:linear-gradient(135deg,#1a5c38,#2d8653);padding:16px 20px;
+    <div style="background:linear-gradient(135deg,#7A2E1D,#C1441E);padding:16px 20px;
                 display:flex;align-items:center;justify-content:space-between;">
         <div style="color:#fff;font-weight:700;font-size:1rem;">💬 Customer Messages</div>
-        <span onclick="toggleAdminChat()"
-              style="color:#fff;cursor:pointer;font-size:1.4rem;line-height:1;">&times;</span>
+        <button type="button" onclick="toggleAdminChat()" aria-label="Close messages panel"
+                style="background:none;border:none;padding:0;color:#fff;cursor:pointer;font-size:1.4rem;line-height:1;font:inherit;">&times;</button>
     </div>
 
     <!-- Customer List -->
-    <div id="admin-customer-list" style="overflow-y:auto;flex:1;">
-        <div style="padding:20px;text-align:center;color:#aaa;font-size:.85rem;">
-            Loading conversations...
-        </div>
-    </div>
+    <div id="admin-customer-list" style="overflow-y:auto;flex:1;"></div>
 
     <!-- Conversation View (hidden by default) -->
     <div id="admin-convo" style="display:none;flex-direction:column;flex:1;overflow:hidden;height:100%;">
-        <div id="admin-convo-header"
-            style="padding:10px 16px;background:#f4f9f6;border-bottom:1px solid #eee;
-                   display:flex;align-items:center;gap:10px;cursor:pointer;"
-            onclick="showCustomerList()">
-            <span>←</span>
+        <button type="button" id="admin-convo-header" onclick="showCustomerList()" aria-label="Back to conversation list"
+            style="padding:10px 16px;background:var(--cream);border:none;border-bottom:1px solid #eee;
+                   display:flex;align-items:center;gap:10px;cursor:pointer;width:100%;text-align:left;font:inherit;">
+            <i class="bi bi-arrow-left" aria-hidden="true"></i>
             <span id="admin-convo-name" style="font-weight:600;font-size:.9rem;"></span>
-        </div>
-        <div id="admin-messages"
+        </button>
+        <div id="admin-messages" class="cj-chat-messages"
             style="flex:1;overflow-y:auto;padding:14px;display:flex;
-                   flex-direction:column;gap:8px;background:#f4f9f6;
+                   flex-direction:column;gap:8px;
                    height:calc(100vh - 180px);"></div>
         <div style="padding:10px 12px;border-top:1px solid #eee;display:flex;gap:8px;background:#fff;">
-            <input id="admin-input" type="text" placeholder="Reply..."
-                style="flex:1;border:1.5px solid #2d8653;border-radius:20px;
+            <input id="admin-input" type="text" placeholder="Reply..." aria-label="Reply to customer"
+                style="flex:1;border:1.5px solid #C1441E;border-radius:20px;
                        padding:8px 14px;font-size:.88rem;outline:none;"
                 onkeydown="if(event.key==='Enter') sendAdminMessage()">
-            <button onclick="sendAdminMessage()"
-                style="background:linear-gradient(135deg,#1a5c38,#2d8653);border:none;
+            <button onclick="sendAdminMessage()" aria-label="Send message"
+                style="background:linear-gradient(135deg,#7A2E1D,#C1441E);border:none;
                        border-radius:50%;width:38px;height:38px;color:#fff;cursor:pointer;
                        display:flex;align-items:center;justify-content:center;font-size:1rem;">
                 ➤
@@ -173,42 +209,134 @@ const ADMIN_ID = {{ auth()->id() }};
 let adminChatOpen = false;
 let activeCustomerId = null;
 let adminSubscribed = {};
+let adminPulseAfterPop = false;
+
+// The pop animation and the idle pulse both animate #admin-chat-btn's own
+// transform, and CSS can't run two animations on the same element via
+// separate classes without one fully overriding the other — so the pulse
+// only ever resumes once the pop animation reports it has finished, never
+// by re-adding the class immediately.
+document.getElementById('admin-chat-btn').addEventListener('animationend', function (e) {
+    if (e.animationName === 'cjBubblePop') {
+        this.classList.remove('cj-bubble-pop');
+        if (adminPulseAfterPop) {
+            this.classList.add('cj-bubble-idle');
+            adminPulseAfterPop = false;
+        }
+    }
+});
 
 function toggleAdminChat() {
     adminChatOpen = !adminChatOpen;
     const panel = document.getElementById('admin-chat-panel');
-    panel.style.display = adminChatOpen ? 'flex' : 'none';
-    panel.style.flexDirection = adminChatOpen ? 'column' : '';
-    if (adminChatOpen) loadAdminInbox();
+    const bubble = document.getElementById('admin-chat-btn');
+
+    bubble.classList.remove('cj-bubble-idle');
+    bubble.classList.remove('cj-bubble-pop');
+    void bubble.offsetWidth; // force reflow so the pop animation restarts on rapid clicks
+    bubble.classList.add('cj-bubble-pop');
+    bubble.classList.toggle('cj-chat-open', adminChatOpen);
+    bubble.setAttribute('aria-expanded', String(adminChatOpen));
+
+    if (adminChatOpen) {
+        bubble.setAttribute('aria-label', 'Close customer messages');
+        adminPulseAfterPop = false;
+        panel.style.display = 'flex';
+        panel.style.flexDirection = 'column';
+        // Double rAF: guarantees the browser has painted the closed state
+        // before the "open" class is added, so the expand transition runs.
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+            panel.classList.add('cj-panel-open');
+        }));
+        loadAdminInbox();
+    } else {
+        bubble.setAttribute('aria-label', 'Open customer messages');
+        panel.classList.remove('cj-panel-open');
+        setTimeout(() => {
+            if (!adminChatOpen) {
+                panel.style.display = 'none';
+                panel.style.flexDirection = '';
+            }
+        }, 300);
+
+        const badge = document.getElementById('admin-badge');
+        adminPulseAfterPop = (badge.style.display !== 'flex');
+        bubble.focus();
+    }
+}
+
+// Close the panel on Escape, same as the customer-side chat widget.
+document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && adminChatOpen) {
+        toggleAdminChat();
+    }
+});
+
+function inboxRowSkeleton() {
+    return `<div style="padding:14px 16px;border-bottom:1px solid #f0ebe0;display:flex;align-items:center;gap:12px;">
+        <div class="cj-skeleton" style="width:38px;height:38px;border-radius:50%;flex-shrink:0;"></div>
+        <div style="flex:1;">
+            <div class="cj-skeleton" style="width:55%;height:12px;margin-bottom:6px;"></div>
+            <div class="cj-skeleton" style="width:35%;height:10px;"></div>
+        </div>
+    </div>`;
+}
+
+function chatMessageSkeleton() {
+    const bubble = (side, w, h) => `<div style="display:flex;justify-content:${side};">
+        <div class="cj-skeleton" style="width:${w};height:${h}px;border-radius:${side === 'flex-start' ? '16px 16px 16px 4px' : '16px 16px 4px 16px'};"></div>
+    </div>`;
+    return bubble('flex-start', '65%', 38) + bubble('flex-end', '45%', 32) + bubble('flex-start', '75%', 44);
 }
 
 function loadAdminInbox() {
+    const list = document.getElementById('admin-customer-list');
+    list.innerHTML = inboxRowSkeleton().repeat(3);
     fetch('/admin/chat/inbox')
         .then(r => r.json())
         .then(data => {
-            const list = document.getElementById('admin-customer-list');
+            list.innerHTML = '';
             if (data.customers.length === 0) {
                 list.innerHTML = '<div style="padding:20px;text-align:center;color:#aaa;font-size:.85rem;">No messages yet.</div>';
                 return;
             }
-            list.innerHTML = data.customers.map(c => `
-                <div onclick="openAdminConvo(${c.id}, '${c.name}')"
-                    style="padding:14px 16px;border-bottom:1px solid #f0ebe0;cursor:pointer;
-                           display:flex;align-items:center;gap:12px;transition:background .2s;"
-                    onmouseover="this.style.background='#f4f9f6'"
-                    onmouseout="this.style.background=''">
-                    <div style="width:38px;height:38px;border-radius:50%;
-                                background:linear-gradient(135deg,#1a5c38,#2d8653);
-                                display:flex;align-items:center;justify-content:center;
-                                color:#fff;font-weight:700;font-size:1rem;">
-                        ${c.name.charAt(0).toUpperCase()}
-                    </div>
-                    <div>
-                        <div style="font-weight:600;font-size:.9rem;">${c.name}</div>
-                        <div style="font-size:.75rem;color:#888;">Click to open chat</div>
-                    </div>
-                </div>`).join('');
+            data.customers.forEach(c => list.appendChild(buildInboxRow(c)));
         });
+}
+
+// Built via DOM APIs (not an innerHTML template) so customer names never pass
+// through HTML/attribute parsing — also fixes the div-with-onclick pattern,
+// which real keyboard users cannot Tab to or activate at all.
+function buildInboxRow(c) {
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.style.cssText = 'width:100%;text-align:left;border:none;background:none;font:inherit;'
+        + 'padding:14px 16px;border-bottom:1px solid #f0ebe0;cursor:pointer;'
+        + 'display:flex;align-items:center;gap:12px;transition:background .2s;';
+    row.addEventListener('mouseover', () => row.style.background = '#f4f9f6');
+    row.addEventListener('mouseout', () => row.style.background = '');
+    row.addEventListener('click', () => openAdminConvo(c.id, c.name));
+
+    const avatar = document.createElement('span');
+    avatar.style.cssText = 'width:38px;height:38px;border-radius:50%;flex-shrink:0;'
+        + 'background:linear-gradient(135deg,#7A2E1D,#C1441E);'
+        + 'display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:1rem;';
+    avatar.textContent = c.name.charAt(0).toUpperCase();
+    avatar.setAttribute('aria-hidden', 'true');
+
+    const meta = document.createElement('span');
+    const nameEl = document.createElement('span');
+    nameEl.style.cssText = 'display:block;font-weight:600;font-size:.9rem;';
+    nameEl.textContent = c.name;
+    const hintEl = document.createElement('span');
+    hintEl.style.cssText = 'display:block;font-size:.75rem;color:#888;';
+    hintEl.textContent = 'Click to open chat';
+    meta.appendChild(nameEl);
+    meta.appendChild(hintEl);
+
+    row.appendChild(avatar);
+    row.appendChild(meta);
+    return row;
 }
 
 function openAdminConvo(customerId, customerName) {
@@ -218,6 +346,7 @@ function openAdminConvo(customerId, customerName) {
     convo.style.display = 'flex';
     convo.style.flexDirection = 'column';
     document.getElementById('admin-convo-name').textContent = customerName;
+    document.getElementById('admin-messages').innerHTML = chatMessageSkeleton();
 
     fetch(`/admin/chat/messages/${customerId}`)
         .then(r => r.json())
@@ -234,24 +363,32 @@ function showCustomerList() {
     loadAdminInbox();
 }
 
+let lastAdminMessageSenderId = null;
+
 function renderAdminMessages(messages) {
     const box = document.getElementById('admin-messages');
-    box.innerHTML = messages.length === 0
-        ? '<div style="text-align:center;color:#aaa;font-size:.82rem;margin-top:30px;">No messages yet.</div>'
-        : messages.map(m => adminBubble(m)).join('');
+    if (messages.length === 0) {
+        box.innerHTML = '<div style="text-align:center;color:#aaa;font-size:.82rem;margin-top:30px;">No messages yet.</div>';
+        lastAdminMessageSenderId = null;
+        return;
+    }
+    box.innerHTML = messages.map((m, i) =>
+        adminBubble(m, i > 0 && messages[i - 1].sender_id === m.sender_id)
+    ).join('');
     box.scrollTop = box.scrollHeight;
+    lastAdminMessageSenderId = messages[messages.length - 1].sender_id;
 }
 
-function adminBubble(m) {
+// `grouped` tightens the row's spacing when this message immediately follows
+// another one from the same sender — same convention as the customer widget.
+function adminBubble(m, grouped) {
     const mine = m.sender_id === ADMIN_ID;
-    return `<div style="display:flex;justify-content:${mine ? 'flex-end' : 'flex-start'};">
-        <div style="max-width:75%;padding:9px 13px;
-                    border-radius:${mine ? '16px 16px 4px 16px' : '16px 16px 16px 4px'};
-                    background:${mine ? 'linear-gradient(135deg,#1a5c38,#2d8653)' : '#fff'};
-                    color:${mine ? '#fff' : '#333'};font-size:.87rem;
-                    box-shadow:0 2px 6px rgba(0,0,0,0.08);">
+    const rowClass = grouped ? 'cj-chat-row-grouped' : '';
+    const bubbleClass = mine ? 'cj-chat-bubble-mine' : 'cj-chat-bubble-theirs';
+    return `<div class="${rowClass}" style="display:flex;justify-content:${mine ? 'flex-end' : 'flex-start'};">
+        <div class="${bubbleClass}">
             ${m.body}
-            <div style="font-size:.7rem;opacity:.7;margin-top:3px;text-align:right;">${m.created_at}</div>
+            <div class="cj-chat-timestamp">${m.created_at}</div>
         </div>
     </div>`;
 }
@@ -270,11 +407,7 @@ function sendAdminMessage() {
         },
         body: JSON.stringify({ body, receiver_id: activeCustomerId })
     }).then(r => r.json()).then(data => {
-        const box = document.getElementById('admin-messages');
-        const div = document.createElement('div');
-        div.innerHTML = adminBubble(data.message);
-        box.appendChild(div.firstElementChild);
-        box.scrollTop = box.scrollHeight;
+        appendAdminMessage(data.message);
     });
 }
 
@@ -284,13 +417,19 @@ function subscribeAdminChannel(customerId) {
     const ids = [ADMIN_ID, customerId].sort((a, b) => a - b);
     window.Echo.private(`chat.${ids[0]}.${ids[1]}`).listen('MessageSent', (e) => {
         if (activeCustomerId === e.sender_id) {
-            const box = document.getElementById('admin-messages');
-            const div = document.createElement('div');
-            div.innerHTML = adminBubble(e);
-            box.appendChild(div.firstElementChild);
-            box.scrollTop = box.scrollHeight;
+            appendAdminMessage(e);
         }
     });
+}
+
+function appendAdminMessage(m) {
+    const box = document.getElementById('admin-messages');
+    const grouped = lastAdminMessageSenderId === m.sender_id;
+    const div = document.createElement('div');
+    div.innerHTML = adminBubble(m, grouped);
+    box.appendChild(div.firstElementChild);
+    box.scrollTop = box.scrollHeight;
+    lastAdminMessageSenderId = m.sender_id;
 }
 
 function checkAdminUnread() {
@@ -300,6 +439,11 @@ function checkAdminUnread() {
             const badge = document.getElementById('admin-badge');
             badge.style.display = d.count > 0 ? 'flex' : 'none';
             badge.textContent = d.count;
+
+            // Idle pulse only while closed and nothing unread — an unread
+            // badge is already its own, stronger signal.
+            const bubble = document.getElementById('admin-chat-btn');
+            bubble.classList.toggle('cj-bubble-idle', d.count === 0 && !adminChatOpen);
         });
 }
 setInterval(checkAdminUnread, 20000);

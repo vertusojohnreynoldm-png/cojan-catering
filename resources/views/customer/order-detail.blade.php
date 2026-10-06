@@ -3,16 +3,21 @@
 @section('title', 'Order Detail — Cojan Catering')
 
 @section('content')
-<div class="d-flex align-items-center gap-2 mb-1">
-    <a href="{{ route('customer.orders') }}"
-       style="color:var(--green-dark);text-decoration:none;font-size:.9rem;">← Back to Orders</a>
-</div>
+<x-breadcrumbs :items="['My Orders' => route('customer.orders'), 'Order #' . $order->order_number => null]" />
 <h1 class="cj-page-title">Order Details</h1>
 <p class="cj-page-sub">Order #{{ $order->order_number }}</p>
 
+<!-- Order Progress -->
+<div class="cj-card mb-3">
+    <div class="cj-card-header">Order Progress</div>
+    <div class="cj-card-body">
+        <x-order-timeline :order="$order" />
+    </div>
+</div>
+
 <div class="row g-3">
     <!-- Order Info -->
-    <div class="col-12 col-md-6">
+    <div class="col-12 {{ $order->isBooking() ? '' : 'col-md-6' }}">
         <div class="cj-card h-100">
             <div class="cj-card-header">Order Information</div>
             <div class="cj-card-body">
@@ -24,9 +29,7 @@
                     <tr>
                         <td style="padding:6px 0;color:var(--text-light);">Status</td>
                         <td style="padding:6px 0;">
-                            <span class="badge-cj badge-{{ $order->status === 'delivered' ? 'delivered' : ($order->status === 'cancelled' ? 'cancelled' : ($order->status === 'out_for_delivery' ? 'delivery' : ($order->status === 'preparing' ? 'preparing' : ($order->status === 'confirmed' ? 'confirmed' : 'pending')))) }}">
-                                {{ ucfirst(str_replace('_', ' ', $order->status)) }}
-                            </span>
+                            <x-order-status-badge :order="$order" />
                         </td>
                     </tr>
                     <tr>
@@ -60,15 +63,19 @@
         </div>
     </div>
 
-    <!-- QR Code -->
+    <!-- QR Code — bookings have no rider to scan/track against, so this is
+         hidden entirely for them. QR generation itself is untouched; it's
+         still generated at order creation, just not shown here. -->
+    @unless($order->isBooking())
     <div class="col-12 col-md-6">
         <div class="cj-card h-100">
             <div class="cj-card-header">QR Code</div>
             <div class="cj-card-body text-center py-4">
                 @if($order->qr_code)
-                    <div style="display:inline-block;padding:16px;background:#fff;
+                    <div role="img" aria-label="QR code to track order {{ $order->order_number }}"
+                         style="display:inline-block;padding:16px;background:#fff;
                                 border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
-                        {!! $order->qr_code !!}
+                        <div aria-hidden="true">{!! $order->qr_code !!}</div>
                     </div>
                     <p style="color:var(--text-light);font-size:.8rem;margin-top:1rem;">
                         Scan this QR code to track your order
@@ -79,6 +86,7 @@
             </div>
         </div>
     </div>
+    @endunless
 
     <!-- Order Items -->
     <div class="col-12">
@@ -98,7 +106,7 @@
                         <tbody>
                             @foreach($order->orderItems as $item)
                             <tr>
-                                <td>{{ $item->menuItem->name }}</td>
+                                <td>{{ $item->displayName() }}</td>
                                 <td>₱{{ number_format($item->unit_price, 2) }}</td>
                                 <td>{{ $item->quantity }}</td>
                                 <td>₱{{ number_format($item->subtotal, 2) }}</td>

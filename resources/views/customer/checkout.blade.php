@@ -3,6 +3,7 @@
 @section('title', 'Checkout — Cojan Catering')
 
 @section('content')
+<x-breadcrumbs :items="['Menu' => route('customer.menu'), 'Cart' => route('customer.cart'), 'Checkout' => null]" />
 <h1 class="cj-page-title">Checkout</h1>
 
 <div class="row g-3 mt-1">
@@ -34,7 +35,7 @@
                     </span>
                 </div>
                 <div class="mt-3">
-                    <span style="background:var(--green-dark);color:#fff;
+                    <span id="payment-summary-pill" style="background:var(--green-dark);color:#fff;
                                  padding:4px 12px;border-radius:20px;font-size:.8rem;">
                         💵 Cash on Delivery
                     </span>
@@ -88,6 +89,13 @@
                                    padding:10px 14px;font-size:.9rem;outline:none;
                                    font-family:'DM Sans',sans-serif;resize:vertical;"></textarea>
                     </div>
+
+                    @php $selectedPayment = old('payment_method', 'cash_on_delivery'); @endphp
+                    <x-payment-method-selector
+                        :selected-payment="$selectedPayment"
+                        :total="$total + 50"
+                        :gcash-qr="$gcashQr" />
+
                     <button type="submit" class="btn-cj btn-cj w-100"
                             style="width:100%;padding:.75rem;">
                         Place Order →
