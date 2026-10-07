@@ -114,8 +114,11 @@
     const updatedEl = document.getElementById('delivery-map-updated');
     const waitingEl = document.getElementById('delivery-map-waiting');
     const SAN_JOSE = [12.3585, 121.0687]; // San Jose, Occidental Mindoro
+    const STALE_AFTER_MS = 60000;
     let map = null;
     let marker = null;
+    let accuracyCircle = null;
+    let lastUpdateTimestamp = null;
 
     function ensureMap(lat, lng) {
         if (map) return;
@@ -131,27 +134,56 @@
         marker = L.marker(center).addTo(map).bindPopup('Rider location');
     }
 
-    function updateMarker(lat, lng, updatedAt) {
+    function refreshStaleness() {
+        if (lastUpdateTimestamp === null) return;
+        const ageMs = Date.now() - lastUpdateTimestamp;
+        if (ageMs > STALE_AFTER_MS) {
+            updatedEl.textContent = 'Rider location may be outdated';
+            updatedEl.style.color = 'var(--danger)';
+        } else {
+            updatedEl.textContent = 'Last updated ' + new Date(lastUpdateTimestamp).toLocaleTimeString();
+            updatedEl.style.color = '';
+        }
+    }
+    setInterval(refreshStaleness, 15000);
+
+    function updateMarker(lat, lng, updatedAt, accuracy) {
         ensureMap(lat, lng);
         marker.setLatLng([lat, lng]);
         map.panTo([lat, lng]);
-        if (updatedAt) {
-            updatedEl.textContent = 'Last updated ' + new Date(updatedAt).toLocaleTimeString();
+
+        if (accuracy !== null && accuracy !== undefined) {
+            if (accuracyCircle) {
+                accuracyCircle.setLatLng([lat, lng]);
+                accuracyCircle.setRadius(accuracy);
+            } else {
+                accuracyCircle = L.circle([lat, lng], {
+                    radius: accuracy,
+                    color: '#C1441E',
+                    fillColor: '#C1441E',
+                    fillOpacity: 0.15,
+                    weight: 1,
+                }).addTo(map);
+            }
         }
+
+        lastUpdateTimestamp = updatedAt ? new Date(updatedAt).getTime() : Date.now();
+        refreshStaleness();
     }
 
     @if($trackingActive)
         updateMarker(
             {{ $order->delivery->current_lat }},
             {{ $order->delivery->current_lng }},
-            '{{ $order->delivery->last_location_update?->toIso8601String() }}'
+            '{{ $order->delivery->last_location_update?->toIso8601String() }}',
+            {{ $order->delivery->current_accuracy ?? 'null' }}
         );
     @endif
 
     @if($order->delivery && in_array($order->delivery->status, ['picked_up', 'in_transit']))
         if (window.Echo) {
             window.Echo.private(`delivery.${orderId}`).listen('DeliveryLocationUpdated', (e) => {
-                updateMarker(e.lat, e.lng, e.updated_at);
+                updateMarker(e.lat, e.lng, e.updated_at, e.accuracy);
             });
         }
     @endif

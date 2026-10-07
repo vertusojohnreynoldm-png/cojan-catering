@@ -48,8 +48,9 @@ class OrderController extends Controller
     public function updateLocation(Request $request, $id)
     {
         $request->validate([
-            'lat' => 'required|numeric|between:-90,90',
-            'lng' => 'required|numeric|between:-180,180',
+            'lat'      => 'required|numeric|between:-90,90',
+            'lng'      => 'required|numeric|between:-180,180',
+            'accuracy' => 'nullable|numeric|min:0',
         ]);
 
         $delivery = Delivery::where('user_id', auth()->id())->findOrFail($id);
@@ -64,6 +65,7 @@ class OrderController extends Controller
         $delivery->update([
             'current_lat'          => $request->lat,
             'current_lng'          => $request->lng,
+            'current_accuracy'     => $request->accuracy,
             'last_location_update' => now(),
         ]);
 

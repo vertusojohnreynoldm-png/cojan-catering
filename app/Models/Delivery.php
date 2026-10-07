@@ -19,6 +19,7 @@ class Delivery extends Model
         'notes',
         'current_lat',
         'current_lng',
+        'current_accuracy',
         'last_location_update',
     ];
 
@@ -29,6 +30,7 @@ class Delivery extends Model
         'last_location_update'  => 'datetime',
         'current_lat'           => 'float',
         'current_lng'           => 'float',
+        'current_accuracy'      => 'float',
     ];
 
     public function order()

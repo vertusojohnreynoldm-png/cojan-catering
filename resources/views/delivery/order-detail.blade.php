@@ -136,13 +136,22 @@
 
 @if(in_array($delivery->status, ['picked_up', 'in_transit']))
 <div id="location-status" class="alert-cj mt-2" style="display:none;max-width:600px;"></div>
+<p id="gps-accuracy-status" class="mt-2" style="display:none;max-width:600px;font-size:.85rem;font-weight:600;"></p>
 <script>
 (function () {
     const deliveryId = {{ $delivery->id }};
     const statusEl = document.getElementById('location-status');
+    const accuracyEl = document.getElementById('gps-accuracy-status');
     const THROTTLE_MS = 7000;
+    const GOOD_ACCURACY_M = 100;   // readings at/under this are considered a real GPS lock
+    const HARD_REJECT_M = 5000;    // readings worse than this are almost certainly an IP-based guess — always ignored
+    const GRACE_PERIOD_MS = 30000; // avoids sending the rough Wi-Fi/IP guess before GPS locks on
+    const PAGE_LOAD_TIME = Date.now();
+
     let lastSent = 0;
     let watchId = null;
+    let locked = false;     // true once we've either seen a good fix or timed out the grace period
+    let bestSoFar = null;   // { lat, lng, accuracy } — best reading seen during the grace period
 
     function showStatus(message, isError) {
         if (!statusEl) return;
@@ -151,16 +160,47 @@
         statusEl.style.display = 'block';
     }
 
-    function sendLocation(lat, lng) {
+    function updateAccuracyStatus(accuracy) {
+        if (!accuracyEl) return;
+        const rounded = Math.round(accuracy);
+        if (accuracy <= GOOD_ACCURACY_M) {
+            accuracyEl.textContent = `GPS accuracy: ±${rounded} m`;
+            accuracyEl.style.color = '#15803d';
+        } else {
+            accuracyEl.textContent = `Waiting for a better GPS signal (±${rounded} m)... try going outside or enabling precise location.`;
+            accuracyEl.style.color = '#92400e';
+        }
+        accuracyEl.style.display = 'block';
+    }
+
+    function sendLocation(lat, lng, accuracy) {
         fetch(`{{ url('/delivery/orders') }}/${deliveryId}/location`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
             },
-            body: JSON.stringify({ lat, lng }),
+            body: JSON.stringify({ lat, lng, accuracy }),
         }).catch(() => { /* transient network failure — the next watchPosition tick retries */ });
     }
+
+    function maybeSend(lat, lng, accuracy) {
+        const now = Date.now();
+        if (now - lastSent < THROTTLE_MS) return;
+        lastSent = now;
+        sendLocation(lat, lng, accuracy);
+    }
+
+    // Independent safety net: if readings arrive sparsely enough that no
+    // watchPosition callback happens to land right at the 30s mark, this
+    // still forces the transition on schedule rather than leaving the rider
+    // waiting indefinitely for a fix that may never fully lock on.
+    setTimeout(() => {
+        if (!locked && bestSoFar) {
+            locked = true;
+            maybeSend(bestSoFar.lat, bestSoFar.lng, bestSoFar.accuracy);
+        }
+    }, GRACE_PERIOD_MS);
 
     if (!navigator.geolocation) {
         showStatus('Live location sharing is not supported on this device/browser — the customer won\'t see live tracking for this delivery.', true);
@@ -168,10 +208,38 @@
         watchId = navigator.geolocation.watchPosition(
             (position) => {
                 statusEl.style.display = 'none';
-                const now = Date.now();
-                if (now - lastSent < THROTTLE_MS) return;
-                lastSent = now;
-                sendLocation(position.coords.latitude, position.coords.longitude);
+
+                const accuracy = position.coords.accuracy;
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
+
+                updateAccuracyStatus(accuracy);
+
+                if (accuracy > HARD_REJECT_M) {
+                    return; // near-certain IP-based guess — ignored outright, grace period or not
+                }
+
+                if (locked) {
+                    maybeSend(lat, lng, accuracy);
+                    return;
+                }
+
+                if (accuracy <= GOOD_ACCURACY_M) {
+                    locked = true;
+                    maybeSend(lat, lng, accuracy);
+                    return;
+                }
+
+                // Still within the grace period with no good fix yet — track the
+                // best reading in case the window times out before one arrives.
+                if (!bestSoFar || accuracy < bestSoFar.accuracy) {
+                    bestSoFar = { lat, lng, accuracy };
+                }
+
+                if (Date.now() - PAGE_LOAD_TIME >= GRACE_PERIOD_MS) {
+                    locked = true;
+                    maybeSend(bestSoFar.lat, bestSoFar.lng, bestSoFar.accuracy);
+                }
             },
             (error) => {
                 if (error.code === error.PERMISSION_DENIED) {
@@ -180,12 +248,33 @@
                     showStatus('Having trouble getting your location right now — live tracking may be delayed, but the rest of the delivery still works normally.', true);
                 }
             },
-            { enableHighAccuracy: true, maximumAge: 5000 }
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
         );
     }
 
     window.addEventListener('beforeunload', () => {
         if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+    });
+
+    // Keep the screen awake so the phone doesn't lock and pause location
+    // updates. Best-effort only — silently skipped if unsupported or denied.
+    let wakeLock = null;
+
+    async function requestWakeLock() {
+        if (!('wakeLock' in navigator)) return;
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+        } catch (e) {
+            // Unsupported, denied, or the tab isn't visible — not critical, skip silently.
+        }
+    }
+
+    requestWakeLock();
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            requestWakeLock();
+        }
     });
 })();
 </script>

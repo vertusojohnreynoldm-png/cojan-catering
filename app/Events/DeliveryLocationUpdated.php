@@ -29,6 +29,7 @@ class DeliveryLocationUpdated implements ShouldBroadcast
         return [
             'lat'        => $this->delivery->current_lat,
             'lng'        => $this->delivery->current_lng,
+            'accuracy'   => $this->delivery->current_accuracy,
             'updated_at' => $this->delivery->last_location_update?->toIso8601String(),
         ];
     }
