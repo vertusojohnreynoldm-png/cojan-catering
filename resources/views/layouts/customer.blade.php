@@ -290,9 +290,22 @@ document.addEventListener('keydown', function(e) {
        the panel's 9998) while the panel went full-screen, sitting directly
        over the input row's Send button in the same bottom-right corner. The
        panel already has its own header close button, so the bubble is
-       simply hidden while open — no need for it on mobile at all. */
+       simply hidden while open — no need for it on mobile at all.
+
+       !important is required here, not decorative: #chat-bubble carries an
+       inline style="...display:flex;..." attribute, and an inline style
+       always wins over a stylesheet rule — ANY stylesheet rule, regardless
+       of selector specificity — unless that rule is !important. The first
+       attempt at this fix omitted it and silently never applied. */
     #chat-bubble.cj-chat-open {
-        display: none;
+        display: none !important;
+    }
+    /* Second, independent mechanism, deliberately redundant with the rule
+       above: toggled on <body> (not the bubble itself), so a future markup
+       change to #chat-bubble can't silently resurrect this bug the same way
+       the missing !important just did. */
+    body.chat-open #chat-bubble {
+        display: none !important;
     }
     /* Keeps the input row clear of the home bar / gesture area on iOS —
        the input itself stays above the safe area rather than under it. */
@@ -395,6 +408,7 @@ function toggleChat() {
     void bubble.offsetWidth; // force reflow so the pop animation restarts on rapid clicks
     bubble.classList.add('cj-bubble-pop');
     bubble.classList.toggle('cj-chat-open', chatOpen);
+    document.body.classList.toggle('chat-open', chatOpen);
     bubble.setAttribute('aria-expanded', String(chatOpen));
 
     if (chatOpen) {
