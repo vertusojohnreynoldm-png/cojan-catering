@@ -1,23 +1,30 @@
 <x-guest-layout>
-    <div class="mb-4 text-sm text-gray-600">
-        {{ __('Thanks for signing up! Before getting started, could you verify your email address by clicking on the link we just emailed to you? If you didn\'t receive the email, we will gladly send you another.') }}
+    <a href="{{ route('welcome') }}" class="cj-auth-back-pill">
+        <i class="bi bi-arrow-left"></i> {{ __('Back to Home') }}
+    </a>
+
+    <div class="text-center mb-4">
+        <div style="font-size:2.5rem;line-height:1;margin-bottom:.5rem;">📧</div>
+        <h2 class="fw-serif" style="font-size:1.3rem;color:var(--green-dark);margin-bottom:.4rem;">
+            {{ __('Verify your email') }}
+        </h2>
+        <p style="font-size:.9rem;color:var(--text-mid);margin:0;">
+            {{ __('Before you can place orders or book catering packages, please confirm your email address by clicking the link we just sent you.') }}
+        </p>
     </div>
 
-    @if (session('status') == 'verification-link-sent')
-        <div class="mb-4 font-medium text-sm text-green-600">
-            {{ __('A new verification link has been sent to the email address you provided during registration.') }}
+    @if (session('success'))
+        <div class="alert-cj alert-success mb-3" style="font-size:.85rem;">
+            {{ session('success') }}
         </div>
     @endif
 
-    <div class="mt-4 flex items-center justify-between">
+    <div class="d-flex align-items-center justify-content-between flex-wrap" style="gap:.75rem;">
         <form method="POST" action="{{ route('verification.send') }}">
             @csrf
-
-            <div>
-                <x-primary-button>
-                    {{ __('Resend Verification Email') }}
-                </x-primary-button>
-            </div>
+            <x-primary-button>
+                {{ __('Resend Verification Email') }}
+            </x-primary-button>
         </form>
 
         <button type="button" class="cj-auth-link" style="background:none;border:none;padding:0;cursor:pointer;"

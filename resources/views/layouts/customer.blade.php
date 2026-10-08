@@ -123,6 +123,30 @@
 </nav>
 <x-logout-modal />
 
+@auth
+    @if(!auth()->user()->hasVerifiedEmail())
+        <div id="verify-email-banner" class="alert-cj alert-warning"
+             style="border-radius:0;margin:0;justify-content:center;position:relative;padding-right:40px;">
+            <i class="bi bi-envelope-exclamation"></i>
+            <span>Please verify your email to place orders or book catering packages.</span>
+            <form method="POST" action="{{ route('verification.send') }}" style="display:inline;margin:0;">
+                @csrf
+                <button type="submit"
+                        style="background:none;border:none;padding:0;margin-left:.4rem;color:#92400e;
+                               font-weight:700;text-decoration:underline;cursor:pointer;font-size:inherit;">
+                    Resend email
+                </button>
+            </form>
+            <button type="button" onclick="document.getElementById('verify-email-banner').style.display='none'"
+                    aria-label="Dismiss"
+                    style="position:absolute;right:12px;top:50%;transform:translateY(-50%);
+                           background:none;border:none;font-size:1.1rem;color:#92400e;cursor:pointer;line-height:1;">
+                &times;
+            </button>
+        </div>
+    @endif
+@endauth
+
 <x-toast />
 
 <div class="cj-page">

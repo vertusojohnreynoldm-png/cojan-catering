@@ -108,10 +108,12 @@ Route::middleware(['auth', 'role:customer'])->prefix('customer')->name('customer
     // Packages
     Route::get('/packages', [PackageController::class, 'index'])->name('packages.index');
 
-    // Package booking (Avail flow) — separate from the regular cart checkout
-    Route::post('/packages/avail', [PackageController::class, 'storeBooking'])->name('packages.avail');
-    Route::get('/packages/checkout', [PackageController::class, 'checkout'])->name('packages.checkout');
-    Route::post('/packages/checkout', [PackageController::class, 'store'])->name('packages.checkout.store');
+    // Package booking (Avail flow) — separate from the regular cart checkout.
+    // 'verified' gates the actual booking actions, not browsing the package
+    // list above.
+    Route::post('/packages/avail', [PackageController::class, 'storeBooking'])->middleware('verified')->name('packages.avail');
+    Route::get('/packages/checkout', [PackageController::class, 'checkout'])->middleware('verified')->name('packages.checkout');
+    Route::post('/packages/checkout', [PackageController::class, 'store'])->middleware('verified')->name('packages.checkout.store');
 
     // Cart
     Route::get('/cart', [CartController::class, 'index'])->name('cart');
@@ -121,10 +123,10 @@ Route::middleware(['auth', 'role:customer'])->prefix('customer')->name('customer
     Route::get('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
     Route::get('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
 
-    // Orders
+    // Orders — 'verified' gates placing an order, not viewing past ones
     Route::get('/orders', [OrderController::class, 'index'])->name('orders');
-    Route::get('/checkout', [OrderController::class, 'checkout'])->name('checkout');
-    Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
+    Route::get('/checkout', [OrderController::class, 'checkout'])->middleware('verified')->name('checkout');
+    Route::post('/orders', [OrderController::class, 'store'])->middleware('verified')->name('orders.store');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
 
     // Feedback

@@ -28,12 +28,17 @@ class UserController extends Controller
         ]);
 
         User::create([
-            'name'     => $request->name,
-            'email'    => $request->email,
-            'password' => Hash::make($request->password),
-            'role'     => $request->role,
-            'phone'    => $request->phone,
-            'address'  => $request->address,
+            'name'              => $request->name,
+            'email'             => $request->email,
+            'password'          => Hash::make($request->password),
+            'role'              => $request->role,
+            'phone'             => $request->phone,
+            'address'           => $request->address,
+            // Staff-created accounts skip self-registration's email
+            // verification — an admin creating this account on someone's
+            // behalf is itself the trust signal; nobody should get locked
+            // out of ordering because a staff member set up their account.
+            'email_verified_at' => now(),
         ]);
 
         return redirect()->route('admin.users')->with('success', 'User created successfully!');

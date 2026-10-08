@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Mail\WelcomeMail;
 use App\Models\User;
+use App\Rules\NotCommonEmailTypo;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,9 +26,15 @@ class RegisteredUserController extends Controller
 
     public function store(Request $request): RedirectResponse
     {
+        // Normalize (not just validate) the email — trim + lowercase silently,
+        // rather than rejecting "User@Gmail.com" with a hard validation error.
+        $request->merge([
+            'email' => strtolower(trim((string) $request->input('email', ''))),
+        ]);
+
         $request->validate([
             'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['required', 'string', 'lowercase', 'email', 'max:255', 'unique:'.User::class],
+            'email'    => ['required', 'string', 'email:rfc,dns', 'max:255', 'unique:'.User::class, new NotCommonEmailTypo],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
 
