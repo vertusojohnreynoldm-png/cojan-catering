@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\OrderNotifier;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
@@ -40,7 +41,13 @@ class OrderController extends Controller
         ]);
 
         $order = Order::findOrFail($id);
+        $oldStatus = $order->status;
+
         $order->update(['status' => $request->status]);
+
+        if ($oldStatus !== $order->status) {
+            OrderNotifier::sendStatusChanged($order);
+        }
 
         return redirect()->route('admin.orders.show', $id)
             ->with('success', 'Order status updated successfully!');

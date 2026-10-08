@@ -79,6 +79,14 @@ return [
             'transport' => 'array',
         ],
 
+        // Railway Hobby blocks outbound SMTP, so production mail goes
+        // through Brevo's HTTPS API instead — registered via Mail::extend()
+        // in AppServiceProvider::boot().
+        'brevo' => [
+            'transport' => 'brevo',
+            'key' => env('BREVO_API_KEY'),
+        ],
+
         'failover' => [
             'transport' => 'failover',
             'mailers' => [

@@ -6,6 +6,7 @@ use App\Events\DeliveryLocationUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Delivery;
 use App\Models\Order;
+use App\Services\OrderNotifier;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
@@ -33,10 +34,22 @@ class OrderController extends Controller
             $data['picked_up_at'] = now();
         } elseif ($request->status === 'delivered') {
             $data['delivered_at'] = now();
-            $delivery->order->update([
+
+            $order = $delivery->order;
+            $oldOrderStatus = $order->status;
+
+            $order->update([
                 'status'         => 'delivered',
                 'payment_status' => 'paid',
             ]);
+
+            // Only the 'delivered' transition ever changes the Order's own
+            // status from this controller — picked_up/in_transit/assigned/
+            // failed are tracked on the Delivery sub-model only, so there's
+            // nothing order-status-wise to email about for those.
+            if ($oldOrderStatus !== $order->status) {
+                OrderNotifier::sendStatusChanged($order);
+            }
         }
 
         $delivery->update($data);
