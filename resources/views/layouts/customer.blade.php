@@ -260,7 +260,7 @@ document.addEventListener('keydown', function(e) {
     <div id="chat-messages" class="cj-chat-messages"
         style="flex:1;overflow-y:auto;padding:14px;display:flex;
                flex-direction:column;gap:8px;"></div>
-    <div style="padding:10px 12px;border-top:1px solid #eee;display:flex;gap:8px;background:#fff;">
+    <div id="chat-input-row" style="padding:10px 12px;border-top:1px solid #eee;display:flex;gap:8px;background:#fff;">
         <input id="chat-input" type="text" placeholder="Type a message..." aria-label="Type a message"
             style="flex:1;border:1.5px solid #C1441E;border-radius:20px;
                    padding:8px 14px;font-size:.88rem;outline:none;"
@@ -279,12 +279,25 @@ document.addEventListener('keydown', function(e) {
         bottom: 0 !important;
         right: 0 !important;
         width: 100vw !important;
-        height: 100vh !important;
+        height: 100dvh !important;
         border-radius: 0 !important;
     }
     #chat-bubble {
         bottom: 20px !important;
         right: 20px !important;
+    }
+    /* Bug fix: the bubble used to stay visible (and on top, z-index 9999 vs
+       the panel's 9998) while the panel went full-screen, sitting directly
+       over the input row's Send button in the same bottom-right corner. The
+       panel already has its own header close button, so the bubble is
+       simply hidden while open — no need for it on mobile at all. */
+    #chat-bubble.cj-chat-open {
+        display: none;
+    }
+    /* Keeps the input row clear of the home bar / gesture area on iOS —
+       the input itself stays above the safe area rather than under it. */
+    #chat-input-row {
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
     }
 }
 
@@ -355,6 +368,23 @@ document.getElementById('chat-bubble').addEventListener('animationend', function
     }
 });
 
+// 100dvh alone doesn't react to the iOS on-screen keyboard — Safari doesn't
+// shrink the layout viewport when the keyboard opens over a fixed-position
+// full-screen panel, which is exactly what leaves the input/Send button
+// hidden behind it. visualViewport.height DOES reflect the keyboard, so the
+// panel's actual pixel height is kept in sync with it while open on mobile.
+if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', function () {
+        const win = document.getElementById('chat-window');
+        if (chatOpen && window.matchMedia('(max-width: 768px)').matches) {
+            // setProperty(..., 'important'): the CSS rule sets height with
+            // !important for the full-screen-on-mobile case, which would
+            // otherwise silently beat a plain JS-assigned inline style.
+            win.style.setProperty('height', window.visualViewport.height + 'px', 'important');
+        }
+    });
+}
+
 function toggleChat() {
     chatOpen = !chatOpen;
     const win = document.getElementById('chat-window');
@@ -388,6 +418,7 @@ function toggleChat() {
             if (!chatOpen) {
                 win.style.display = 'none';
                 win.style.flexDirection = '';
+                win.style.removeProperty('height'); // clear any keyboard-driven override from this session
             }
         }, 300);
 

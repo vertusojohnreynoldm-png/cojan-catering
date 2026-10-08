@@ -5,11 +5,14 @@ namespace App\Events;
 use App\Models\Delivery;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class DeliveryLocationUpdated implements ShouldBroadcast
+// ShouldBroadcastNow — see the same note in App\Events\MessageSent. Location
+// updates are also latency-sensitive (a queued, delayed GPS ping defeats the
+// point of "live" tracking even once a worker exists).
+class DeliveryLocationUpdated implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 

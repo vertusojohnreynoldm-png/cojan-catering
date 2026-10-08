@@ -5,11 +5,16 @@ namespace App\Events;
 use App\Models\Message;
 use Illuminate\Broadcasting\InteractsWithSockets;
 use Illuminate\Broadcasting\PrivateChannel;
-use Illuminate\Contracts\Broadcasting\ShouldBroadcast;
+use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class MessageSent implements ShouldBroadcast
+// ShouldBroadcastNow (not ShouldBroadcast): QUEUE_CONNECTION is "database"
+// here, not "sync" — a queued broadcast only actually reaches Pusher once a
+// queue worker processes it, and no worker runs on this project (confirmed:
+// 8 broadcast jobs sat unprocessed in the jobs table since September).
+// ShouldBroadcastNow sends inline, with no worker dependency.
+class MessageSent implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
