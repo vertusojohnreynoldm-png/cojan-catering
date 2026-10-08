@@ -191,13 +191,13 @@
                    height:calc(100vh - 180px);"></div>
         <div style="padding:10px 12px;border-top:1px solid #eee;display:flex;gap:8px;background:#fff;">
             <input id="admin-input" type="text" placeholder="Reply..." aria-label="Reply to customer"
-                style="flex:1;border:1.5px solid #C1441E;border-radius:20px;
-                       padding:8px 14px;font-size:.88rem;outline:none;"
+                style="flex:1;min-width:0;border:1.5px solid #C1441E;border-radius:20px;
+                       padding:8px 14px;font-size:16px;outline:none;"
                 onkeydown="if(event.key==='Enter') sendAdminMessage()">
             <button onclick="sendAdminMessage()" aria-label="Send message"
-                style="background:linear-gradient(135deg,#7A2E1D,#C1441E);border:none;
-                       border-radius:50%;width:38px;height:38px;color:#fff;cursor:pointer;
-                       display:flex;align-items:center;justify-content:center;font-size:1rem;">
+                style="background:linear-gradient(135deg,#7A2E1D,#C1441E);border:none;flex-shrink:0;
+                       border-radius:50%;width:44px;height:44px;color:#fff;cursor:pointer;
+                       display:flex;align-items:center;justify-content:center;font-size:1.1rem;">
                 ➤
             </button>
         </div>
