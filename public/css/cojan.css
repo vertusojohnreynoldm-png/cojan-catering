@@ -634,3 +634,111 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: 1.25; }
 .divider { border: none; border-top: 1px solid rgba(122,46,29,.1); margin: 1rem 0; }
 .gap-2 { gap: .5rem; }
 .fw-serif { font-family: 'Playfair Display', serif; }
+
+/* ── MOBILE: TAP TARGETS & TYPOGRAPHY ──
+   Scoped to the mobile breakpoint only — desktop keeps its existing, denser
+   sizing. 44px matches the WCAG/Apple/Material baseline for a comfortable
+   one-handed thumb target; 16px on inputs is specifically what stops iOS
+   Safari auto-zooming the page on focus (anything under 16px triggers it). */
+@media (max-width: 768px) {
+  .btn-cj, .btn-cj-outline, .btn-cj-amber, .btn-cj-danger {
+    min-height: 44px;
+    padding-top: .6rem;
+    padding-bottom: .6rem;
+  }
+  .btn-cj-sm {
+    min-height: 44px;
+    padding-top: .55rem;
+    padding-bottom: .55rem;
+  }
+  .cj-input, .cj-select, .cj-textarea {
+    font-size: 16px;
+    min-height: 44px;
+  }
+  .cj-textarea { min-height: 88px; } /* don't force a 2-line textarea down to one visible row */
+  .cj-stepper-btn {
+    width: 44px;
+    height: 44px;
+    font-size: 1.15rem;
+  }
+  .cj-stepper-value { min-width: 40px; }
+  /* The compact stepper variant (menu/package cards) still grows to 44px on
+     mobile — "sm" only means "visually lighter," not "sub-minimum tap
+     target." Desktop keeps the smaller 26px version via the unscoped rule
+     above this media query. */
+  .cj-stepper-sm .cj-stepper-btn { width: 44px; height: 44px; font-size: 1.1rem; }
+  .cj-stepper-sm .cj-stepper-value { min-width: 36px; font-size: .9rem; }
+}
+
+/* ── MOBILE: SAFE-AREA-AWARE STICKY ACTION BAR ──
+   For a page's one primary action (place order, confirm Avail booking,
+   update delivery status) — pins it above the thumb without requiring a
+   scroll to the bottom of a long page, and never sits under the iOS home
+   bar / Android gesture strip. Usage: wrap the action button(s) in
+   <div class="cj-sticky-actions">...</div> — it's a no-op above 768px
+   (renders inline, in normal document flow) so desktop is unaffected. */
+.cj-sticky-actions {
+  display: contents;
+}
+@media (max-width: 768px) {
+  .cj-sticky-actions {
+    display: flex;
+    gap: .6rem;
+    position: sticky;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 40;
+    background: var(--white);
+    padding: .75rem 1rem calc(.75rem + env(safe-area-inset-bottom));
+    margin: 1rem -1rem -1rem;
+    box-shadow: 0 -4px 16px rgba(0,0,0,.08);
+  }
+  .cj-sticky-actions > * {
+    flex: 1;
+  }
+}
+
+/* ── MOBILE: 16px INPUT FIX FOR INLINE-STYLED FIELDS ──
+   A handful of fields (checkout delivery details, GCash reference, feedback
+   comment) set font-size directly via an inline style attribute rather than
+   the .cj-input/.cj-textarea classes, so they weren't covered by the earlier
+   class-based mobile font-size bump. An inline style always beats an
+   external rule regardless of specificity unless that rule carries
+   !important (same reason the chat-bubble fix above needed it), so this
+   needs !important to actually win here. */
+@media (max-width: 768px) {
+  .cj-mobile-field {
+    font-size: 16px !important;
+  }
+}
+
+/* ── MOBILE: TOAST VS. CHAT BUBBLE OVERLAP FIX ──
+   The chat bubble repositions to bottom:20/right:20 (~60px tall) at this
+   same 768px breakpoint, and the toast container sits at the same bottom
+   corner — confirmed via real getBoundingClientRect() that the two overlap
+   at 360px (toast y:714-764 vs bubble y:701-761). Raise the toast above the
+   bubble's footprint on every width where the bubble repositions, not just
+   the narrowest phones. */
+@media (max-width: 768px) {
+  #cj-toast-container {
+    bottom: calc(92px + env(safe-area-inset-bottom)) !important;
+  }
+}
+
+/* ── MOBILE: TOAST WIDTH OVERFLOW FIX ──
+   .cj-toast's max-width (340px) plus the toast container's inline
+   left:24px offset overflows viewports narrower than ~364px (e.g. a 360px
+   or 320px phone). Pin the container to both edges and let the toast fill
+   the available width instead of assuming a fixed min/max-width. */
+@media (max-width: 480px) {
+  #cj-toast-container {
+    left: 12px !important;
+    right: 12px !important;
+  }
+  .cj-toast {
+    min-width: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+  }
+}

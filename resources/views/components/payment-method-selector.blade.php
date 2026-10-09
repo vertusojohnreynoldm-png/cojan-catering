@@ -94,7 +94,9 @@
     <input type="text" name="gcash_reference" id="gcash_reference"
            value="{{ old('gcash_reference') }}"
            placeholder="e.g. 1234567890123"
+           inputmode="numeric" autocomplete="off"
            {{ $selectedPayment === 'gcash' ? 'required' : '' }}
+           class="cj-mobile-field"
            style="width:100%;border:1.5px solid #ddd;border-radius:10px;
                   padding:10px 14px;font-size:.9rem;outline:none;">
 </div>

@@ -79,6 +79,7 @@
                 </label>
                 <textarea name="comment" rows="4"
                     placeholder="Tell us about your experience..."
+                    class="cj-mobile-field"
                     style="width:100%;border:1.5px solid #ddd;border-radius:10px;
                            padding:10px 14px;font-size:.9rem;outline:none;
                            font-family:'DM Sans',sans-serif;resize:vertical;"></textarea>

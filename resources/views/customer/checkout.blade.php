@@ -65,7 +65,8 @@
                         <label style="font-weight:600;font-size:.9rem;margin-bottom:.4rem;display:block;">
                             Delivery Address <span style="color:#e74c3c;">*</span>
                         </label>
-                        <textarea name="delivery_address" rows="3" required
+                        <textarea name="delivery_address" rows="3" required autocomplete="street-address"
+                            class="cj-mobile-field"
                             style="width:100%;border:1.5px solid #ddd;border-radius:10px;
                                    padding:10px 14px;font-size:.9rem;outline:none;
                                    font-family:'DM Sans',sans-serif;resize:vertical;">{{ auth()->user()->address }}</textarea>
@@ -74,8 +75,9 @@
                         <label style="font-weight:600;font-size:.9rem;margin-bottom:.4rem;display:block;">
                             Contact Number <span style="color:#e74c3c;">*</span>
                         </label>
-                        <input type="text" name="delivery_phone" required
+                        <input type="tel" name="delivery_phone" required inputmode="tel" autocomplete="tel"
                                value="{{ auth()->user()->phone }}"
+                               class="cj-mobile-field"
                                style="width:100%;border:1.5px solid #ddd;border-radius:10px;
                                       padding:10px 14px;font-size:.9rem;outline:none;">
                     </div>
@@ -85,6 +87,7 @@
                         </label>
                         <textarea name="notes" rows="2"
                             placeholder="Special instructions..."
+                            class="cj-mobile-field"
                             style="width:100%;border:1.5px solid #ddd;border-radius:10px;
                                    padding:10px 14px;font-size:.9rem;outline:none;
                                    font-family:'DM Sans',sans-serif;resize:vertical;"></textarea>
