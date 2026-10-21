@@ -55,8 +55,15 @@ class PackageStockService
             }
         }
 
-        foreach ($utensilNeeds as $utensilId => $needed) {
-            $utensilsInStock->get($utensilId)->decrement('quantity', $needed);
-        }
+        // Suppressed: without this, decrementing N utensils for one order
+        // would fire UtensilObserver N times — one near-identical "stock
+        // adjusted" entry per utensil. The order's own ActivityLogger entry
+        // (see OrderObserver::created()) is the single, consolidated record
+        // of this stock movement instead.
+        ActivityLogger::withoutLogging(function () use ($utensilNeeds, $utensilsInStock) {
+            foreach ($utensilNeeds as $utensilId => $needed) {
+                $utensilsInStock->get($utensilId)->decrement('quantity', $needed);
+            }
+        });
     }
 }
