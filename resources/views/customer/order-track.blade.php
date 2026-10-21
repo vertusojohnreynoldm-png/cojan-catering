@@ -51,6 +51,12 @@
                         <td style="padding:6px 0;color:var(--text-light);width:40%;">Order #</td>
                         <td style="padding:6px 0;font-weight:600;">{{ $order->order_number }}</td>
                     </tr>
+                    @unless($order->isBooking())
+                    <tr>
+                        <td style="padding:6px 0;color:var(--text-light);">Delivery Time</td>
+                        <td style="padding:6px 0;">{{ $order->deliveryTimeLabel() }}</td>
+                    </tr>
+                    @endunless
                     <tr>
                         <td style="padding:6px 0;color:var(--text-light);">Address</td>
                         <td style="padding:6px 0;">{{ $order->delivery_address }}</td>

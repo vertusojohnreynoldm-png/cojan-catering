@@ -132,6 +132,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('customer')->name('customer
     // Orders — 'verified' gates placing an order, not viewing past ones
     Route::get('/orders', [OrderController::class, 'index'])->name('orders');
     Route::get('/checkout', [OrderController::class, 'checkout'])->middleware('verified')->name('checkout');
+    Route::get('/checkout/delivery-slots', [OrderController::class, 'deliverySlots'])->middleware('verified')->name('checkout.delivery-slots');
     Route::post('/orders', [OrderController::class, 'store'])->middleware('verified')->name('orders.store');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
 

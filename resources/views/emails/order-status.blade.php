@@ -13,6 +13,12 @@
     <strong>#{{ $order->order_number }}</strong>.
 </p>
 
+@unless($order->isBooking())
+<p style="margin:0 0 16px;font-size:14px;">
+    <strong>Delivery time:</strong> {{ $order->deliveryTimeLabel() }}
+</p>
+@endunless
+
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-bottom:16px;border:1px solid #f0ebe0;border-radius:8px;">
     <tr>
         <td style="padding:14px 16px;">

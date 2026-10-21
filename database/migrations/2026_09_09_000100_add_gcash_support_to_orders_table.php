@@ -15,13 +15,21 @@ return new class extends Migration
 
         // Laravel's schema builder can't safely widen a MySQL ENUM's allowed
         // values without Doctrine DBAL (which handles enums poorly), so this
-        // is done with a raw ALTER TABLE instead.
-        DB::statement("ALTER TABLE orders MODIFY payment_method ENUM('cash_on_delivery', 'gcash') NOT NULL DEFAULT 'cash_on_delivery'");
+        // is done with a raw ALTER TABLE instead. MySQL-only syntax — guarded
+        // so the test suite's SQLite connection (see phpunit.xml) can run
+        // this migration too: SQLite has no real ENUM type at all (it's just
+        // TEXT with a CHECK constraint Laravel already created via
+        // Schema::table above), so there's nothing to widen there.
+        if (DB::connection()->getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE orders MODIFY payment_method ENUM('cash_on_delivery', 'gcash') NOT NULL DEFAULT 'cash_on_delivery'");
+        }
     }
 
     public function down(): void
     {
-        DB::statement("ALTER TABLE orders MODIFY payment_method ENUM('cash_on_delivery') NOT NULL DEFAULT 'cash_on_delivery'");
+        if (DB::connection()->getDriverName() === 'mysql') {
+            DB::statement("ALTER TABLE orders MODIFY payment_method ENUM('cash_on_delivery') NOT NULL DEFAULT 'cash_on_delivery'");
+        }
 
         Schema::table('orders', function (Blueprint $table) {
             $table->dropColumn('gcash_reference');

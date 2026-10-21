@@ -43,6 +43,9 @@
                 <div class="cj-card-body">
                     <p><strong>Name:</strong> {{ $delivery->order->user->name }}</p>
                     <p><strong>Phone:</strong> {{ $delivery->order->delivery_phone }}</p>
+                    @unless($delivery->order->isBooking())
+                        <p><strong>Delivery Time:</strong> {{ $delivery->order->deliveryTimeLabel() }}</p>
+                    @endunless
                     <p><strong>Address:</strong> {{ $delivery->order->delivery_address }}</p>
                     @if($delivery->order->notes)
                         <p><strong>Notes:</strong> {{ $delivery->order->notes }}</p>

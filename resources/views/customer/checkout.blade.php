@@ -2,6 +2,27 @@
 
 @section('title', 'Checkout — Cojan Catering')
 
+@section('styles')
+<style>
+    .delivery-type-card {
+        display: block; cursor: pointer; border: 1.5px solid #ddd; border-radius: 10px;
+        padding: 12px 14px; text-align: center; transition: all .2s ease;
+    }
+    .delivery-type-card.active { border-color: var(--green-dark); background: var(--green-light, #FBE8DE); }
+    .delivery-type-card:focus-within { outline: 2px solid var(--green-dark); outline-offset: 2px; }
+
+    /* 44px+ tap targets per the mobile brief — these are real buttons, not
+       a dropdown, so the slot choice is thumb-friendly on a phone. */
+    .slot-chip {
+        min-height: 44px; padding: .5rem 1rem; border-radius: 100px;
+        border: 1.5px solid #ddd; background: #fff; font-size: .85rem;
+        cursor: pointer; transition: all .2s ease;
+    }
+    .slot-chip.active { background: var(--green-dark); color: #fff; border-color: var(--green-dark); }
+    .slot-chip:focus-visible { outline: 2px solid var(--green-dark); outline-offset: 2px; }
+</style>
+@endsection
+
 @section('content')
 <x-breadcrumbs :items="['Menu' => route('customer.menu'), 'Cart' => route('customer.cart'), 'Checkout' => null]" />
 <h1 class="cj-page-title">Checkout</h1>
@@ -59,7 +80,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('customer.orders.store') }}">
+                <form method="POST" action="{{ route('customer.orders.store') }}" id="checkout-form">
                     @csrf
                     <div class="mb-3">
                         <label style="font-weight:600;font-size:.9rem;margin-bottom:.4rem;display:block;">
@@ -93,6 +114,50 @@
                                    font-family:'DM Sans',sans-serif;resize:vertical;"></textarea>
                     </div>
 
+                    @php $selectedDeliveryType = old('delivery_type', 'asap'); @endphp
+                    <div class="mb-3">
+                        <label class="cj-label" style="font-weight:600;font-size:.9rem;margin-bottom:.4rem;display:block;">
+                            Delivery Time <span style="color:#e74c3c;">*</span>
+                        </label>
+                        <div class="row g-2">
+                            <div class="col-6">
+                                <label for="dt-asap" class="delivery-type-card {{ $selectedDeliveryType === 'asap' ? 'active' : '' }}">
+                                    <input type="radio" id="dt-asap" name="delivery_type" value="asap"
+                                           class="visually-hidden delivery-type-input"
+                                           {{ $selectedDeliveryType === 'asap' ? 'checked' : '' }}>
+                                    <div style="font-size:1.3rem;">⚡</div>
+                                    <div style="font-size:.85rem;font-weight:600;">As Soon As Possible</div>
+                                </label>
+                            </div>
+                            <div class="col-6">
+                                <label for="dt-scheduled" class="delivery-type-card {{ $selectedDeliveryType === 'scheduled' ? 'active' : '' }}">
+                                    <input type="radio" id="dt-scheduled" name="delivery_type" value="scheduled"
+                                           class="visually-hidden delivery-type-input"
+                                           {{ $selectedDeliveryType === 'scheduled' ? 'checked' : '' }}>
+                                    <div style="font-size:1.3rem;">🗓️</div>
+                                    <div style="font-size:.85rem;font-weight:600;">Schedule for Later</div>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="schedule-panel" style="{{ $selectedDeliveryType === 'scheduled' ? '' : 'display:none;' }} margin-bottom:1rem;">
+                        <div class="mb-3">
+                            <label class="cj-label">Delivery Date</label>
+                            <input type="date" name="delivery_date" id="delivery-date" class="cj-input cj-mobile-field"
+                                   min="{{ $minDeliveryDate }}" max="{{ $maxDeliveryDate }}"
+                                   value="{{ old('delivery_date', $minDeliveryDate) }}">
+                        </div>
+                        <div class="mb-1">
+                            <label class="cj-label">Delivery Window</label>
+                            <div id="slot-chips" style="display:flex;flex-wrap:wrap;gap:.5rem;"></div>
+                            <input type="hidden" name="delivery_slot" id="delivery-slot-value" value="{{ old('delivery_slot') }}">
+                            <p id="slot-empty-msg" style="display:none;color:var(--text-light);font-size:.85rem;margin-top:.5rem;">
+                                No delivery windows available for this date — try another date.
+                            </p>
+                        </div>
+                    </div>
+
                     @php $selectedPayment = old('payment_method', 'cash_on_delivery'); @endphp
                     <x-payment-method-selector
                         :selected-payment="$selectedPayment"
@@ -108,4 +173,104 @@
         </div>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+(function () {
+    const typeInputs = document.querySelectorAll('.delivery-type-input');
+    const typeCards = document.querySelectorAll('.delivery-type-card');
+    const schedulePanel = document.getElementById('schedule-panel');
+    const dateInput = document.getElementById('delivery-date');
+    const chipsContainer = document.getElementById('slot-chips');
+    const slotValueInput = document.getElementById('delivery-slot-value');
+    const emptyMsg = document.getElementById('slot-empty-msg');
+
+    function updateTypeUI() {
+        const selected = document.querySelector('.delivery-type-input:checked');
+        const isScheduled = !!selected && selected.value === 'scheduled';
+
+        typeCards.forEach(card => {
+            card.classList.toggle('active', card.querySelector('.delivery-type-input').checked);
+        });
+        schedulePanel.style.display = isScheduled ? '' : 'none';
+
+        if (isScheduled) loadSlots();
+    }
+
+    function loadSlots() {
+        chipsContainer.innerHTML = '<span style="color:var(--text-light);font-size:.85rem;">Loading available times...</span>';
+        emptyMsg.style.display = 'none';
+
+        fetch(`{{ route('customer.checkout.delivery-slots') }}?date=${encodeURIComponent(dateInput.value)}`)
+            .then(r => r.json())
+            .then(data => renderSlots(data.slots || []))
+            .catch(() => {
+                chipsContainer.innerHTML = '';
+                emptyMsg.textContent = 'Could not load delivery times — please try again.';
+                emptyMsg.style.display = 'block';
+            });
+    }
+
+    function renderSlots(slots) {
+        chipsContainer.innerHTML = '';
+
+        if (slots.length === 0) {
+            emptyMsg.textContent = 'No delivery windows available for this date — try another date.';
+            emptyMsg.style.display = 'block';
+            slotValueInput.value = '';
+            return;
+        }
+
+        emptyMsg.style.display = 'none';
+        const previouslySelected = slotValueInput.value;
+        let stillValid = false;
+
+        slots.forEach(slot => {
+            const chip = document.createElement('button');
+            chip.type = 'button';
+            chip.className = 'slot-chip';
+            chip.textContent = slot.label;
+            chip.setAttribute('aria-pressed', 'false');
+
+            if (slot.value === previouslySelected) {
+                chip.classList.add('active');
+                chip.setAttribute('aria-pressed', 'true');
+                stillValid = true;
+            }
+
+            chip.addEventListener('click', () => {
+                chipsContainer.querySelectorAll('.slot-chip').forEach(c => {
+                    c.classList.remove('active');
+                    c.setAttribute('aria-pressed', 'false');
+                });
+                chip.classList.add('active');
+                chip.setAttribute('aria-pressed', 'true');
+                slotValueInput.value = slot.value;
+            });
+
+            chipsContainer.appendChild(chip);
+        });
+
+        if (!stillValid) slotValueInput.value = '';
+    }
+
+    typeInputs.forEach(input => input.addEventListener('change', updateTypeUI));
+    dateInput.addEventListener('change', loadSlots);
+
+    document.getElementById('checkout-form').addEventListener('submit', (e) => {
+        const selected = document.querySelector('.delivery-type-input:checked');
+        if (selected && selected.value === 'scheduled' && !slotValueInput.value) {
+            e.preventDefault();
+            emptyMsg.textContent = 'Please choose a delivery window before placing your order.';
+            emptyMsg.style.display = 'block';
+        }
+    });
+
+    updateTypeUI();
+    @if(old('delivery_type') === 'scheduled')
+        loadSlots();
+    @endif
+})();
+</script>
 @endsection

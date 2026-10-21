@@ -37,6 +37,13 @@ return new class extends Migration
      */
     public function up(): void
     {
+        // MySQL-only INTERVAL syntax, and meaningless on a fresh database
+        // anyway (there's no pre-UTC legacy data to shift) — guarded so the
+        // test suite's SQLite connection (see phpunit.xml) can migrate too.
+        if (DB::connection()->getDriverName() !== 'mysql') {
+            return;
+        }
+
         DB::transaction(function () {
             $this->shift('categories', ['created_at', 'updated_at'], 8);
             $this->shift('catering_packages', ['created_at', 'updated_at', 'deleted_at'], 8);
@@ -64,6 +71,10 @@ return new class extends Migration
      */
     public function down(): void
     {
+        if (DB::connection()->getDriverName() !== 'mysql') {
+            return;
+        }
+
         DB::transaction(function () {
             $this->shift('categories', ['created_at', 'updated_at'], -8);
             $this->shift('catering_packages', ['created_at', 'updated_at', 'deleted_at'], -8);

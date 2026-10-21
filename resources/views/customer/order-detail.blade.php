@@ -40,6 +40,12 @@
                             </span>
                         </td>
                     </tr>
+                    @unless($order->isBooking())
+                    <tr>
+                        <td style="padding:6px 0;color:var(--text-light);">Delivery Time</td>
+                        <td style="padding:6px 0;">{{ $order->deliveryTimeLabel() }}</td>
+                    </tr>
+                    @endunless
                     <tr>
                         <td style="padding:6px 0;color:var(--text-light);">Address</td>
                         <td style="padding:6px 0;">{{ $order->delivery_address }}</td>

@@ -46,6 +46,7 @@
                         <tr>
                             <th>Order #</th>
                             <th>Customer</th>
+                            <th>Delivery Time</th>
                             <th>Total</th>
                             <th>Status</th>
                             <th>Payment</th>
@@ -55,9 +56,15 @@
                     </thead>
                     <tbody>
                         @forelse($orders as $order)
-                            <tr>
+                            <tr @if($order->isDeliveryDueSoon()) style="background:var(--amber-light);" @endif>
                                 <td><strong>{{ $order->order_number }}</strong></td>
                                 <td>{{ $order->user->name }}</td>
+                                <td>
+                                    {{ $order->deliveryTimeLabel() }}
+                                    @if($order->isDeliveryDueSoon())
+                                        <span class="badge-cj badge-pending" style="margin-left:.3rem;">Due soon</span>
+                                    @endif
+                                </td>
                                 <td>₱{{ number_format($order->total_amount, 2) }}</td>
                                 <td>
                                     <x-order-status-badge :order="$order" />
@@ -79,7 +86,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7" class="text-center py-4" style="color:var(--text-light)">No orders found</td>
+                                <td colspan="8" class="text-center py-4" style="color:var(--text-light)">No orders found</td>
                             </tr>
                         @endforelse
                     </tbody>

@@ -6,8 +6,11 @@ use Carbon\Carbon;
 
 class BusinessHours
 {
-    private const OPEN_TIME = '07:30';
-    private const CLOSE_TIME = '20:00';
+    // Public so DeliverySlots can generate slots against the same hours
+    // without duplicating the magic strings (and risking drift if these
+    // ever change).
+    public const OPEN_TIME = '07:30';
+    public const CLOSE_TIME = '20:00';
 
     /**
      * Whether regular menu-item ordering is accepted right now. Relies on

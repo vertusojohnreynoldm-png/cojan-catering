@@ -16,11 +16,15 @@ class OrderObserver
             ? ['payment_method' => ['old' => null, 'new' => 'gcash'], 'gcash_reference' => ['old' => null, 'new' => $order->gcash_reference]]
             : null;
 
+        // Bookings show their own event_date elsewhere and never set
+        // delivery_type/requested_delivery_at, so this is regular-order-only.
+        $timeFrame = $order->isBooking() ? '' : ' — ' . $order->deliveryTimeLabel();
+
         ActivityLogger::log(
             $order->isBooking() ? 'booking.requested' : 'order.placed',
             'orders',
             "{$actorName} placed " . ($order->isBooking() ? 'a catering booking request' : 'an order')
-                . " #{$order->order_number} (₱" . number_format($order->total_amount, 2) . ")",
+                . " #{$order->order_number} (₱" . number_format($order->total_amount, 2) . "){$timeFrame}",
             subject: $order,
             changes: $changes,
         );

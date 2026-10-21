@@ -29,10 +29,14 @@ class Order extends Model
         'contact_name',
         'event_date',
         'event_type',
+        'delivery_type',
+        'requested_delivery_at',
+        'delivery_window_label',
     ];
 
     protected $casts = [
         'event_date' => 'datetime',
+        'requested_delivery_at' => 'datetime',
     ];
 
     public function user()
@@ -70,6 +74,39 @@ class Order extends Model
     public function isBooking(): bool
     {
         return $this->event_date !== null;
+    }
+
+    /**
+     * "ASAP" / "Today, 10:00 AM - 10:30 AM" — the one place every view
+     * (customer, admin, rider, email, activity log) gets this from, so the
+     * wording never drifts between them. Bookings don't use this at all —
+     * they display $order->event_date directly instead.
+     */
+    public function deliveryTimeLabel(): string
+    {
+        if ($this->delivery_type !== 'scheduled' || !$this->requested_delivery_at) {
+            return 'ASAP';
+        }
+
+        $date = $this->requested_delivery_at->isToday()
+            ? 'Today'
+            : ($this->requested_delivery_at->isTomorrow() ? 'Tomorrow' : $this->requested_delivery_at->format('M d'));
+
+        return "{$date}, {$this->delivery_window_label}";
+    }
+
+    /**
+     * True when a scheduled (non-ASAP) delivery is due within the next hour
+     * and the order hasn't gone out yet — drives the admin list's "due soon"
+     * highlight.
+     */
+    public function isDeliveryDueSoon(): bool
+    {
+        return $this->delivery_type === 'scheduled'
+            && $this->requested_delivery_at
+            && !in_array($this->status, ['out_for_delivery', 'delivered', 'cancelled'], true)
+            && $this->requested_delivery_at->isFuture()
+            && now()->diffInMinutes($this->requested_delivery_at, false) <= 60;
     }
 
     /**

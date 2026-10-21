@@ -23,6 +23,7 @@
                         <tr>
                             <th>Order #</th>
                             <th>Date</th>
+                            <th>Delivery Time</th>
                             <th>Total</th>
                             <th>Status</th>
                             <th>Payment</th>
@@ -34,6 +35,7 @@
                         <tr>
                             <td><strong>{{ $order->order_number }}</strong></td>
                             <td>{{ $order->created_at->format('M d, Y') }}</td>
+                            <td>{{ $order->isBooking() ? $order->event_date->format('M d, Y h:i A') : $order->deliveryTimeLabel() }}</td>
                             <td>₱{{ number_format($order->total_amount, 2) }}</td>
                             <td>
                                 <x-order-status-badge :order="$order" />

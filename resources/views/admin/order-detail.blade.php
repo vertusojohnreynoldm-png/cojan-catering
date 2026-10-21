@@ -55,6 +55,14 @@
                     <p><strong>Email:</strong> {{ $order->user->email }}</p>
                     <p><strong>Phone:</strong> {{ $order->delivery_phone }}</p>
                     <p><strong>Address:</strong> {{ $order->delivery_address }}</p>
+                    @unless($order->isBooking())
+                        <p>
+                            <strong>Delivery Time:</strong> {{ $order->deliveryTimeLabel() }}
+                            @if($order->isDeliveryDueSoon())
+                                <span class="badge-cj badge-pending">Due soon</span>
+                            @endif
+                        </p>
+                    @endunless
                     <p><strong>Date:</strong> {{ $order->created_at->format('M d, Y h:i A') }}</p>
                     @if($order->notes)
                         <p><strong>Notes:</strong> {{ $order->notes }}</p>
