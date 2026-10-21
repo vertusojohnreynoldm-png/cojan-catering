@@ -43,7 +43,11 @@
             top: 64px;
             left: 0;
             right: 0;
-            max-height: calc(100dvh - 64px);
+            /* height (not max-height): the panel must fully cover whatever page
+               content sits behind it — otherwise content (and the dashboard's
+               floating chat bubble, which sits above this panel's z-index)
+               peeks through below a short link list. */
+            height: calc(100dvh - 64px);
             overflow-y: auto;
             -webkit-overflow-scrolling: touch;
             background: var(--green-dark);
@@ -55,6 +59,12 @@
             z-index: 1050;
         }
         .cj-admin-nav-links.open { display: flex; }
+        /* The admin dashboard's own floating chat button (z-index 9999) would
+           otherwise float on top of this panel (z-index 1050) while it's
+           open — same class of bug as the customer chat-bubble/panel overlap,
+           same fix: an !important body-class rule so it can't be silently
+           reintroduced by a later change to either element. */
+        body.admin-nav-open #admin-chat-btn { display: none !important; }
         .cj-admin-nav-links a,
         .cj-admin-nav-links button {
             width: 100% !important;
@@ -141,6 +151,7 @@ function toggleAdminNav() {
     btn.classList.toggle('open', isOpen);
     btn.setAttribute('aria-expanded', String(isOpen));
     btn.setAttribute('aria-label', isOpen ? 'Close menu' : 'Open menu');
+    document.body.classList.toggle('admin-nav-open', isOpen);
 }
 document.addEventListener('click', function (e) {
     const nav = document.getElementById('adminMobileNav');
