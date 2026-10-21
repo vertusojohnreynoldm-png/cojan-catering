@@ -40,6 +40,8 @@
     </div>
 </div>
 
+<x-delivery-proof-card :order="$order" />
+
 <div class="row g-3">
     <!-- Order Info -->
     <div class="col-12 col-md-6">
@@ -73,7 +75,7 @@
                     </tr>
                     <tr>
                         <td style="padding:6px 0;color:var(--text-light);">Payment</td>
-                        <td style="padding:6px 0;">💵 Cash on Delivery</td>
+                        <td style="padding:6px 0;">{{ $order->payment_method === 'gcash' ? '📱 GCash' : '💵 Cash on Delivery' }}</td>
                     </tr>
                 </table>
             </div>

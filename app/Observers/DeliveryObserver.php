@@ -33,6 +33,15 @@ class DeliveryObserver
         $diff = ActivityLogger::diffFor($delivery, ignore: [
             'current_lat', 'current_lng', 'current_accuracy', 'last_location_update',
             'picked_up_at', 'delivered_at', 'assigned_at',
+            // The photo is mentioned in the sentence below ("photo attached")
+            // but its storage path never appears in the log at all — not
+            // even as a reference — per the brief's "never embeds the image."
+            'proof_photo_path',
+            // Already logged with its own clearer sentence by
+            // Customer\OrderController::confirmReceived() — ignoring it here
+            // stops that same save from also producing a generic, redundant
+            // "updated delivery (customer_confirmed_at)" entry.
+            'customer_confirmed_at',
         ]);
         if ($diff === null) {
             return;
@@ -55,10 +64,14 @@ class DeliveryObserver
         }
 
         if (isset($diff['status'])) {
+            $photoNote = ($diff['status']['new'] === 'delivered' && $delivery->proof_photo_path)
+                ? ' (photo attached)'
+                : '';
+
             ActivityLogger::log(
                 'delivery.status_changed',
                 'orders',
-                "{$actorName} marked {$orderLabel} delivery as " . str_replace('_', ' ', $diff['status']['new']),
+                "{$actorName} marked {$orderLabel} delivery as " . str_replace('_', ' ', $diff['status']['new']) . $photoNote,
                 subject: $order ?? $delivery,
                 changes: $diff,
             );

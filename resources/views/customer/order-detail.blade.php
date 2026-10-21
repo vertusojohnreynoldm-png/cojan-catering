@@ -15,6 +15,8 @@
     </div>
 </div>
 
+<x-delivery-proof-card :order="$order" />
+
 <div class="row g-3">
     <!-- Order Info -->
     <div class="col-12 {{ $order->isBooking() ? '' : 'col-md-6' }}">

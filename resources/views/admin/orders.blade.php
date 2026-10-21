@@ -67,7 +67,15 @@
                                 </td>
                                 <td>₱{{ number_format($order->total_amount, 2) }}</td>
                                 <td>
-                                    <x-order-status-badge :order="$order" />
+                                    <div class="d-flex align-items-center gap-2">
+                                        <x-order-status-badge :order="$order" />
+                                        @if($order->delivery?->proof_photo_path)
+                                            <a href="{{ route('admin.orders.show', $order->id) }}" title="View delivery proof photo">
+                                                <img src="{{ route('orders.proof-photo', $order->id) }}" alt="Delivery proof thumbnail"
+                                                     style="width:32px;height:32px;object-fit:cover;border-radius:6px;box-shadow:var(--shadow-sm);">
+                                            </a>
+                                        @endif
+                                    </div>
                                 </td>
                                 <td>
                                     <div class="d-flex align-items-center gap-1 flex-wrap">

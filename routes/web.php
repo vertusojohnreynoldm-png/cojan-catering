@@ -22,6 +22,7 @@ use App\Http\Controllers\Customer\CartController;
 use App\Http\Controllers\Customer\OrderController;
 use App\Http\Controllers\Delivery\DashboardController as DeliveryDashboard;
 use App\Http\Controllers\ChatController;
+use App\Http\Controllers\ProofPhotoController;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -36,6 +37,13 @@ Route::get('/', function () {
     }
     return view('welcome');
 })->name('welcome');
+
+// Shared across customer/admin/delivery — authorization is checked inside
+// the controller itself (owner, assigned rider, or admin), since no single
+// role-prefixed group fits a route all three need.
+Route::get('/orders/{order}/proof-photo', [ProofPhotoController::class, 'show'])
+    ->middleware('auth')
+    ->name('orders.proof-photo');
 
 // Admin routes
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -135,6 +143,7 @@ Route::middleware(['auth', 'role:customer'])->prefix('customer')->name('customer
     Route::get('/checkout/delivery-slots', [OrderController::class, 'deliverySlots'])->middleware('verified')->name('checkout.delivery-slots');
     Route::post('/orders', [OrderController::class, 'store'])->middleware('verified')->name('orders.store');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
+    Route::post('/orders/{id}/confirm-received', [OrderController::class, 'confirmReceived'])->name('orders.confirm-received');
 
     // Feedback
     Route::get('/orders/{id}/feedback', [FeedbackController::class, 'create'])->name('feedback.create');

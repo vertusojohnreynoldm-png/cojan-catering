@@ -8,6 +8,7 @@ use App\Models\CateringPackage;
 use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Services\ActivityLogger;
 use App\Services\BusinessHours;
 use App\Services\DeliverySlots;
 use App\Services\PackageStockService;
@@ -263,7 +264,7 @@ class OrderController extends Controller
     public function show($id)
     {
         $order = Order::where('user_id', auth()->id())
-            ->with('orderItems.menuItem', 'orderItems.package')
+            ->with('orderItems.menuItem', 'orderItems.package', 'delivery')
             ->findOrFail($id);
 
         return view('customer.order-detail', compact('order'));
@@ -277,5 +278,28 @@ class OrderController extends Controller
             ->firstOrFail();
 
         return view('customer.order-track', compact('order'));
+    }
+
+    public function confirmReceived($id)
+    {
+        $order = Order::where('user_id', auth()->id())->with('delivery')->findOrFail($id);
+
+        if ($order->status !== 'delivered' || !$order->delivery) {
+            return back()->with('error', 'This order has not been marked as delivered yet.');
+        }
+
+        if (!$order->delivery->customer_confirmed_at) {
+            $order->delivery->update(['customer_confirmed_at' => now()]);
+
+            ActivityLogger::log(
+                'order.customer_confirmed_received',
+                'orders',
+                "{$order->user->name} confirmed receipt of Order #{$order->order_number}",
+                subject: $order,
+                actor: auth()->user(),
+            );
+        }
+
+        return back()->with('success', 'Thanks for confirming!');
     }
 }

@@ -15,7 +15,7 @@ class OrderController extends Controller
         // Catering Bookings (the Avail flow) have their own dedicated list —
         // see Admin\BookingController — so this stays scoped to regular
         // menu-item orders only.
-        $query = Order::regularOrders()->with('user')->orderBy('created_at', 'desc');
+        $query = Order::regularOrders()->with('user', 'delivery')->orderBy('created_at', 'desc');
 
         if ($request->status) {
             $query->where('status', $request->status);

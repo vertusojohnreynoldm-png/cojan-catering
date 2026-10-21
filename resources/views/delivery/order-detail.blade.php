@@ -82,17 +82,233 @@
                                     <option value="assigned" {{ $delivery->status == 'assigned' ? 'selected' : '' }}>Assigned</option>
                                     <option value="picked_up" {{ $delivery->status == 'picked_up' ? 'selected' : '' }}>Picked Up</option>
                                     <option value="in_transit" {{ $delivery->status == 'in_transit' ? 'selected' : '' }}>In Transit</option>
-                                    <option value="delivered" {{ $delivery->status == 'delivered' ? 'selected' : '' }}>Delivered</option>
                                     <option value="failed" {{ $delivery->status == 'failed' ? 'selected' : '' }}>Failed</option>
                                 </select>
                                 <button type="submit" class="btn-del">Update</button>
                             </div>
                         </form>
+                        <p style="font-size:.78rem;color:var(--text-light);margin-top:.5rem;margin-bottom:0;">
+                            To mark this delivered, use "Mark as Delivered" below — it requires a photo.
+                        </p>
                     @endif
                 </div>
             </div>
         </div>
     </div>
+
+    @if($delivery->status === 'delivered')
+        <!-- Delivery Proof — the rider's own record of what they submitted -->
+        <div class="cj-card mt-3">
+            <div class="cj-card-header">Delivery Proof</div>
+            <div class="cj-card-body">
+                @if($delivery->proof_photo_path)
+                    <img src="{{ route('orders.proof-photo', $delivery->order_id) }}" alt="Proof of delivery photo"
+                         style="width:100%;max-width:320px;border-radius:10px;display:block;margin-bottom:.75rem;box-shadow:var(--shadow-sm);">
+                @endif
+                @if($delivery->received_by)
+                    <p><strong>Received by:</strong> {{ $delivery->received_by }}</p>
+                @endif
+                @if($delivery->delivery_note)
+                    <p><strong>Note:</strong> {{ $delivery->delivery_note }}</p>
+                @endif
+            </div>
+        </div>
+    @elseif($delivery->status !== 'failed')
+        <!-- Mark as Delivered — phone-first: big camera button, preview,
+             clear retry-safe loading state. Submits via fetch() (see script
+             below), never a plain form POST, specifically so a failed
+             upload on a poor connection can be retried without losing the
+             already-compressed photo or the typed fields. -->
+        <div class="cj-card mt-3">
+            <div class="cj-card-header">Mark as Delivered</div>
+            <div class="cj-card-body">
+                <div id="pod-camera-area">
+                    <label for="pod-photo-input" id="pod-camera-btn"
+                           style="display:flex;flex-direction:column;align-items:center;justify-content:center;
+                                  gap:.5rem;width:100%;min-height:120px;border:2px dashed var(--green-dark);
+                                  border-radius:12px;cursor:pointer;background:var(--cream);color:var(--green-dark);">
+                        <i class="bi bi-camera-fill" style="font-size:2rem;" aria-hidden="true"></i>
+                        <span style="font-weight:600;">Take Delivery Photo</span>
+                    </label>
+                    <input type="file" id="pod-photo-input" accept="image/*" capture="environment" class="visually-hidden">
+                </div>
+
+                <div id="pod-preview-area" style="display:none;margin-top:.75rem;text-align:center;">
+                    <img id="pod-preview-img" alt="Delivery photo preview" style="max-width:100%;max-height:320px;border-radius:10px;box-shadow:var(--shadow-sm);">
+                    <div style="margin-top:.5rem;">
+                        <button type="button" id="pod-retake-btn" class="btn-cj-outline btn-cj btn-cj-sm">Retake Photo</button>
+                    </div>
+                </div>
+
+                <div class="mb-3 mt-3">
+                    <label class="cj-label">Received By (Optional)</label>
+                    <input type="text" id="pod-received-by" class="cj-input" placeholder="Name of person who received it">
+                </div>
+                <div class="mb-2">
+                    <label class="cj-label">Note (Optional)</label>
+                    <textarea id="pod-note" class="cj-textarea" rows="2" placeholder="Any delivery notes..."></textarea>
+                </div>
+                <p style="font-size:.78rem;color:var(--text-light);margin-bottom:.75rem;display:flex;align-items:center;gap:.35rem;">
+                    <i class="bi bi-shield-lock" aria-hidden="true"></i> Photo is visible only to the customer and admin.
+                </p>
+
+                <div id="pod-error" class="alert-cj alert-danger" style="display:none;"></div>
+
+                <button type="button" id="pod-submit-btn" class="btn-cj btn-cj" style="width:100%;padding:.75rem;" disabled>
+                    Confirm Delivery
+                </button>
+            </div>
+        </div>
+
+        <script>
+        (function () {
+            const fileInput = document.getElementById('pod-photo-input');
+            const previewArea = document.getElementById('pod-preview-area');
+            const previewImg = document.getElementById('pod-preview-img');
+            const retakeBtn = document.getElementById('pod-retake-btn');
+            const submitBtn = document.getElementById('pod-submit-btn');
+            const errorEl = document.getElementById('pod-error');
+            const receivedByInput = document.getElementById('pod-received-by');
+            const noteInput = document.getElementById('pod-note');
+
+            let compressedBlob = null;
+            let submitting = false;
+
+            function showError(msg) {
+                errorEl.textContent = msg;
+                errorEl.style.display = 'block';
+            }
+            function hideError() {
+                errorEl.style.display = 'none';
+            }
+
+            // Resize to at most 1280px on the long edge and re-encode as
+            // JPEG ~0.7 quality — keeps a rider's mobile-data upload small
+            // without the server needing to do any image processing itself.
+            function compressImage(file) {
+                return new Promise((resolve, reject) => {
+                    const img = new Image();
+                    const reader = new FileReader();
+                    reader.onload = (e) => { img.src = e.target.result; };
+                    reader.onerror = () => reject(new Error('read failed'));
+                    img.onload = () => {
+                        const MAX = 1280;
+                        let { width, height } = img;
+                        if (width > MAX || height > MAX) {
+                            if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+                            else { width = Math.round(width * MAX / height); height = MAX; }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                        canvas.toBlob((blob) => {
+                            if (blob) resolve(blob); else reject(new Error('compression failed'));
+                        }, 'image/jpeg', 0.7);
+                    };
+                    img.onerror = () => reject(new Error('decode failed'));
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            fileInput.addEventListener('change', async () => {
+                const file = fileInput.files[0];
+                if (!file) return;
+                hideError();
+                try {
+                    compressedBlob = await compressImage(file);
+                    previewImg.src = URL.createObjectURL(compressedBlob);
+                    previewArea.style.display = 'block';
+                    submitBtn.disabled = false;
+                } catch (e) {
+                    showError('Could not process that photo — please try again.');
+                    compressedBlob = null;
+                    submitBtn.disabled = true;
+                }
+            });
+
+            retakeBtn.addEventListener('click', () => {
+                compressedBlob = null;
+                previewArea.style.display = 'none';
+                submitBtn.disabled = true;
+                fileInput.value = '';
+                hideError();
+            });
+
+            function getLocationOnce() {
+                return new Promise((resolve) => {
+                    if (!navigator.geolocation) return resolve(null);
+                    navigator.geolocation.getCurrentPosition(
+                        (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude, accuracy: pos.coords.accuracy }),
+                        () => resolve(null),
+                        { enableHighAccuracy: true, timeout: 8000, maximumAge: 30000 }
+                    );
+                });
+            }
+
+            async function submitDelivery() {
+                if (submitting) return; // double-tap protection
+                if (!compressedBlob) {
+                    showError('Please take a delivery photo first.');
+                    return;
+                }
+                submitting = true;
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Uploading...';
+                hideError();
+
+                const loc = await getLocationOnce();
+
+                const formData = new FormData();
+                formData.append('status', 'delivered');
+                formData.append('photo', compressedBlob, 'delivery-proof.jpg');
+                if (receivedByInput.value) formData.append('received_by', receivedByInput.value);
+                if (noteInput.value) formData.append('delivery_note', noteInput.value);
+                if (loc) {
+                    formData.append('proof_lat', loc.lat);
+                    formData.append('proof_lng', loc.lng);
+                    formData.append('proof_accuracy', loc.accuracy);
+                }
+
+                try {
+                    const resp = await fetch('{{ route('delivery.orders.status', $delivery->id) }}', {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                            'Accept': 'application/json',
+                        },
+                        body: formData,
+                    });
+
+                    if (resp.ok) {
+                        const data = await resp.json();
+                        window.location.href = data.redirect || window.location.href;
+                        return;
+                    }
+
+                    if (resp.status === 422) {
+                        const data = await resp.json();
+                        const firstError = data.errors ? Object.values(data.errors)[0][0] : 'Please check the form and try again.';
+                        showError(firstError);
+                    } else {
+                        showError('Upload failed — check your connection and tap Confirm Delivery to retry.');
+                    }
+                } catch (e) {
+                    showError('Upload failed — check your connection and tap Confirm Delivery to retry.');
+                }
+
+                // Deliberately does NOT clear compressedBlob/preview/fields —
+                // the whole point is that a retry just re-sends the same
+                // already-compressed photo without the rider redoing anything.
+                submitting = false;
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Confirm Delivery';
+            }
+
+            submitBtn.addEventListener('click', submitDelivery);
+        })();
+        </script>
+    @endif
 
     <!-- Order Items -->
     <div class="cj-card mt-3">
@@ -124,9 +340,22 @@
                     </tfoot>
                 </table>
             </div>
-            <div class="alert-cj alert-warning mt-3">
-                💵 <strong>Payment:</strong> Cash on Delivery — Collect ₱{{ number_format($delivery->order->total_amount, 2) }} upon delivery.
-            </div>
+            @if($delivery->order->payment_method === 'gcash')
+                @if($delivery->order->payment_status === 'paid')
+                    <div class="alert-cj alert-success mt-3">
+                        📱 <strong>Payment:</strong> Paid via GCash — no cash to collect.
+                    </div>
+                @else
+                    <div class="alert-cj alert-danger mt-3">
+                        📱 <strong>Payment:</strong> GCash (Ref: {{ $delivery->order->gcash_reference ?: 'none on file' }}) —
+                        not yet confirmed as paid. Do not accept cash for this order; contact the admin if unsure.
+                    </div>
+                @endif
+            @else
+                <div class="alert-cj alert-warning mt-3">
+                    💵 <strong>Payment:</strong> Cash on Delivery — Collect ₱{{ number_format($delivery->order->total_amount, 2) }} upon delivery.
+                </div>
+            @endif
         </div>
     </div>
 

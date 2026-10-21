@@ -45,6 +45,49 @@
     </div>
     @endif
 
+    @if($order->delivery && $order->delivery->status === 'delivered')
+    <!-- Delivery Proof -->
+    <div class="cj-card mb-3">
+        <div class="cj-card-header">📦 Delivery Proof</div>
+        <div class="cj-card-body">
+            <div class="row g-3">
+                @if($order->delivery->proof_photo_path)
+                    <div class="col-12 col-sm-5">
+                        <img src="{{ route('orders.proof-photo', $order->id) }}" alt="Proof of delivery photo"
+                             style="width:100%;border-radius:10px;box-shadow:var(--shadow-sm);display:block;">
+                    </div>
+                @endif
+                <div class="col-12 {{ $order->delivery->proof_photo_path ? 'col-sm-7' : '' }}">
+                    <p class="mb-1"><strong>Delivered:</strong> {{ $order->delivery->delivered_at?->format('M d, Y h:i A') }}</p>
+                    @if($order->delivery->received_by)
+                        <p class="mb-1"><strong>Received by:</strong> {{ $order->delivery->received_by }}</p>
+                    @endif
+                    @if($order->delivery->delivery_note)
+                        <p class="mb-1"><strong>Note:</strong> {{ $order->delivery->delivery_note }}</p>
+                    @endif
+                    @if($order->delivery->proof_lat && $order->delivery->proof_lng)
+                        <p class="mb-1">
+                            <strong>GPS at delivery:</strong>
+                            {{ number_format($order->delivery->proof_lat, 5) }}, {{ number_format($order->delivery->proof_lng, 5) }}
+                            @if($order->delivery->proof_accuracy)
+                                (±{{ round($order->delivery->proof_accuracy) }}m)
+                            @endif
+                        </p>
+                    @endif
+                    @if($order->delivery->customer_confirmed_at)
+                        <p class="mb-0" style="color:var(--green-dark);font-weight:600;">
+                            <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
+                            Customer confirmed receipt {{ $order->delivery->customer_confirmed_at->format('M d, Y h:i A') }}
+                        </p>
+                    @else
+                        <p class="mb-0" style="color:var(--text-light);">Customer has not confirmed receipt yet.</p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+    @endif
+
     <div class="row g-3">
         <!-- Order Info -->
         <div class="col-12 col-md-6">

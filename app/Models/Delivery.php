@@ -24,6 +24,13 @@ class Delivery extends Model
         'current_lng',
         'current_accuracy',
         'last_location_update',
+        'proof_photo_path',
+        'received_by',
+        'delivery_note',
+        'proof_lat',
+        'proof_lng',
+        'proof_accuracy',
+        'customer_confirmed_at',
     ];
 
     protected $casts = [
@@ -34,6 +41,10 @@ class Delivery extends Model
         'current_lat'           => 'float',
         'current_lng'           => 'float',
         'current_accuracy'      => 'float',
+        'proof_lat'             => 'float',
+        'proof_lng'             => 'float',
+        'proof_accuracy'        => 'float',
+        'customer_confirmed_at' => 'datetime',
     ];
 
     public function order()
@@ -44,5 +55,10 @@ class Delivery extends Model
     public function personnel()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function hasProofOfDelivery(): bool
+    {
+        return $this->status === 'delivered' && !empty($this->proof_photo_path);
     }
 }
