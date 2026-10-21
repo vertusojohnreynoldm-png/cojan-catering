@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Customer\FeedbackController;
+use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogController;
 use App\Http\Controllers\Admin\FeedbackController as AdminFeedbackController;
 use App\Http\Controllers\Admin\AnalyticsController as AdminAnalyticsController;
 use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
@@ -88,6 +89,11 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
 
     // Feedback
     Route::get('/feedback', [AdminFeedbackController::class, 'index'])->name('feedback');
+
+    // Activity Log (audit trail) — read-only, admin-only (already scoped by
+    // this group's auth+role:admin middleware).
+    Route::get('/activity', [AdminActivityLogController::class, 'index'])->name('activity');
+    Route::get('/activity/export', [AdminActivityLogController::class, 'export'])->name('activity.export');
 
     // Chat
     Route::get('/chat/inbox', [ChatController::class, 'adminInbox'])->name('chat.inbox');

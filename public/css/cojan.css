@@ -224,6 +224,14 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: 1.25; }
    deliberately outside the pending/confirmed/etc. status color language. */
 .badge-booking-type { background: #ede9fe; color: #5b21b6; }
 
+/* Activity log category badges — a distinct 4-color language (blue/
+   terracotta/amber/teal) from the order-status badges above, so a glance at
+   the log never gets confused with a glance at an order list. */
+.badge-activity-auth   { background: #dbeafe; color: #1e40af; }
+.badge-activity-orders { background: var(--green-light); color: var(--green-dark); }
+.badge-activity-admin  { background: var(--amber-light); color: #92400e; }
+.badge-activity-stock  { background: #ccfbf1; color: #0f766e; }
+
 /* ── ALERTS ── */
 .alert-cj { padding: .85rem 1.1rem; border-radius: var(--radius-sm); margin-bottom: 1rem; font-size: .9rem; display: flex; align-items: center; gap: .6rem; }
 .alert-success { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }

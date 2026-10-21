@@ -136,6 +136,10 @@
            class="btn-cj-outline btn-cj btn-cj-sm {{ request()->routeIs('admin.users*') ? 'cj-admin-nav-active' : '' }}">
             <i class="bi bi-people"></i> Users
         </a>
+        <a href="{{ route('admin.activity') }}" onclick="toggleAdminNav()"
+           class="btn-cj-outline btn-cj btn-cj-sm {{ request()->routeIs('admin.activity*') ? 'cj-admin-nav-active' : '' }}">
+            <i class="bi bi-clock-history"></i> Activity Log
+        </a>
         <button type="button" class="btn-cj-amber btn-cj btn-cj-sm" data-bs-toggle="modal" data-bs-target="#logoutModal">
             <i class="bi bi-box-arrow-right"></i> Logout
         </button>

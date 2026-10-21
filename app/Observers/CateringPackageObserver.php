@@ -29,7 +29,9 @@ class CateringPackageObserver
         $actorName = auth()->user()?->name ?? 'System';
 
         if (isset($diff['is_available']) && count($diff) === 1) {
-            $state = $diff['is_available']['new'] ? 'on' : 'off';
+            // Check the model's real current value, not diffFor()'s already
+            // Yes/No-stringified entry — that string is always truthy.
+            $state = $package->is_available ? 'on' : 'off';
             ActivityLogger::log(
                 'package.availability_toggled',
                 'admin',

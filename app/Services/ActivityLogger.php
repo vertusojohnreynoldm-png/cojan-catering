@@ -129,10 +129,26 @@ class ActivityLogger
         $diff = [];
 
         foreach ($changed as $field) {
-            $diff[$field] = [
-                'old' => $original[$field] ?? null,
-                'new' => $model->getAttribute($field),
-            ];
+            $old = $original[$field] ?? null;
+            $new = $model->getAttribute($field);
+
+            // A boolean-style field (is_available, etc.) commonly ends up
+            // with mismatched representations on each side — the DB-loaded
+            // original comes back as 0/1, while a freshly-set PHP `false`
+            // stays a real boolean until the model is reloaded. {{ false }}
+            // renders as nothing in Blade, so without this an entry like
+            // "is_available: 1 →" silently loses its new value.
+            //
+            // The trigger is deliberately narrow: only when one side is a
+            // genuine PHP bool (is_bool(), not == 0/1) — an actual int field
+            // like user_id or quantity can legitimately hold 0 or 1 and must
+            // never be coerced into "Yes"/"No".
+            if (is_bool($old) || is_bool($new)) {
+                $old = ((bool) $old) ? 'Yes' : 'No';
+                $new = ((bool) $new) ? 'Yes' : 'No';
+            }
+
+            $diff[$field] = ['old' => $old, 'new' => $new];
         }
 
         return $diff;
