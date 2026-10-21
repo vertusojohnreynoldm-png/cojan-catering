@@ -93,6 +93,29 @@
             </div>
         </div>
     </div>
+
+    <!-- Recent Activity -->
+    <div class="cj-card mt-4">
+        <div class="cj-card-header d-flex justify-content-between align-items-center">
+            <span>Recent Activity</span>
+            <a href="{{ route('admin.activity') }}" class="btn-cj-amber btn-cj btn-cj-sm">View All</a>
+        </div>
+        <div class="cj-card-body p-0">
+            <div id="recent-activity-list">
+                @forelse($recentActivity as $log)
+                    <div class="cj-recent-activity-row" data-id="{{ $log->id }}">
+                        <span class="badge-cj badge-activity-{{ $log->category }}">{{ ucfirst($log->category) }}</span>
+                        <span class="cj-recent-activity-desc">{{ $log->description }}</span>
+                        <span class="cj-recent-activity-time" title="{{ $log->created_at->timezone('Asia/Manila')->format('M d, Y g:i A') }}">
+                            {{ $log->created_at->diffForHumans() }}
+                        </span>
+                    </div>
+                @empty
+                    <div class="text-center py-4" style="color:var(--text-light);">No activity recorded yet.</div>
+                @endforelse
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -688,6 +711,53 @@ setInterval(() => {
 }, 12000);
 
 loadAdminInbox();
+
+// Recent Activity widget — prepends new entries live, capped at 5, falling
+// back to a reload-on-reconnect poll the same way the inbox above does.
+(function subscribeAdminActivityChannel() {
+    if (!window.Echo) {
+        setTimeout(subscribeAdminActivityChannel, 50);
+        return;
+    }
+    window.Echo.private('admin.activity').listen('ActivityLogged', function (e) {
+        prependRecentActivity(e);
+    });
+})();
+
+function prependRecentActivity(e) {
+    const list = document.getElementById('recent-activity-list');
+    if (!list) return;
+
+    const emptyMsg = list.querySelector('.text-center');
+    if (emptyMsg) emptyMsg.remove();
+
+    if (list.querySelector('[data-id="' + e.id + '"]')) return; // already shown (e.g. after a fallback reload)
+
+    const row = document.createElement('div');
+    row.className = 'cj-recent-activity-row';
+    row.dataset.id = e.id;
+
+    const badge = document.createElement('span');
+    badge.className = 'badge-cj badge-activity-' + e.category;
+    badge.textContent = e.category.charAt(0).toUpperCase() + e.category.slice(1);
+
+    const desc = document.createElement('span');
+    desc.className = 'cj-recent-activity-desc';
+    desc.textContent = e.description;
+
+    const time = document.createElement('span');
+    time.className = 'cj-recent-activity-time';
+    time.textContent = 'now';
+
+    row.appendChild(badge);
+    row.appendChild(desc);
+    row.appendChild(time);
+    list.insertBefore(row, list.firstChild);
+
+    while (list.children.length > 5) {
+        list.removeChild(list.lastChild);
+    }
+}
 </script>
 </body>
 </html>

@@ -232,6 +232,22 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: 1.25; }
 .badge-activity-admin  { background: var(--amber-light); color: #92400e; }
 .badge-activity-stock  { background: #ccfbf1; color: #0f766e; }
 
+/* Dashboard "Recent Activity" widget rows */
+.cj-recent-activity-row {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .75rem 1.25rem;
+  border-bottom: 1px solid rgba(122,46,29,.07);
+  flex-wrap: wrap;
+}
+.cj-recent-activity-row:last-child { border-bottom: none; }
+.cj-recent-activity-desc { flex: 1; min-width: 180px; font-size: .88rem; }
+.cj-recent-activity-time { font-size: .76rem; color: var(--text-light); white-space: nowrap; }
+@media (max-width: 480px) {
+  .cj-recent-activity-row { padding: .65rem 1rem; }
+}
+
 /* ── ALERTS ── */
 .alert-cj { padding: .85rem 1.1rem; border-radius: var(--radius-sm); margin-bottom: 1rem; font-size: .9rem; display: flex; align-items: center; gap: .6rem; }
 .alert-success { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }

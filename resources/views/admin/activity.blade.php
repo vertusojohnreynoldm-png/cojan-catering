@@ -11,6 +11,20 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/cojan.css') }}">
     <style>
+        #activity-new-banner {
+            display: none;
+            align-items: center;
+            justify-content: space-between;
+            gap: .75rem;
+            background: var(--amber-light);
+            border: 1.5px solid var(--amber);
+            border-radius: var(--radius-sm);
+            padding: .65rem 1rem;
+            margin-bottom: 1rem;
+            font-size: .88rem;
+        }
+        #activity-new-banner.show { display: flex; }
+
         /* ── Desktop (default): inline filter row, table ── */
         .cj-activity-filters-desktop { display: flex; gap: .6rem; flex-wrap: wrap; align-items: flex-end; margin-bottom: 1.25rem; }
         .cj-activity-filters-desktop .mb-3 { margin-bottom: 0 !important; min-width: 150px; }
@@ -56,6 +70,11 @@
 <div class="cj-page">
     <h1 class="cj-page-title">Activity Log</h1>
     <p class="cj-page-sub">Who did what, when, and from where — a read-only audit trail.</p>
+
+    <div id="activity-new-banner">
+        <span><i class="bi bi-arrow-repeat"></i> New activity has come in since you opened this page.</span>
+        <button type="button" class="btn-cj btn-cj-sm" onclick="location.reload()">Refresh</button>
+    </div>
 
     {{-- Desktop: inline filter row --}}
     <form method="GET" action="{{ route('admin.activity') }}" class="cj-activity-filters-desktop">
@@ -206,6 +225,20 @@ function toggleActivityDetails(id) {
     if (!row) return;
     row.classList.toggle('open');
 }
+
+// Live update: a prompt, not an auto-reorder — this list can be filtered and
+// paginated, so splicing a new row in live could land it somewhere wrong or
+// outside the current filter entirely. "Refresh" just reloads with the same
+// query string, which Laravel already preserves via withQueryString().
+(function subscribeActivityPageChannel() {
+    if (!window.Echo) {
+        setTimeout(subscribeActivityPageChannel, 50);
+        return;
+    }
+    window.Echo.private('admin.activity').listen('ActivityLogged', function () {
+        document.getElementById('activity-new-banner').classList.add('show');
+    });
+})();
 </script>
 </body>
 </html>

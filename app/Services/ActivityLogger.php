@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Events\ActivityLogged;
 use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Support\Facades\Cache;
@@ -57,7 +58,7 @@ class ActivityLogger
         try {
             $actor = $actor ?? auth()->user();
 
-            ActivityLog::create([
+            $log = ActivityLog::create([
                 'actor_id'      => $actor?->id,
                 'actor_name'    => $actor?->name ?? 'System',
                 'actor_role'    => $actor?->role ?? 'system',
@@ -71,6 +72,15 @@ class ActivityLogger
                 'ip_address'    => Request::ip(),
                 'user_agent'    => self::summarizeUserAgent(Request::userAgent()),
             ]);
+
+            // The write already succeeded above — a broadcast failure here
+            // must not undo or mask that, so it gets its own try/catch
+            // rather than sharing the outer one.
+            try {
+                broadcast(new ActivityLogged($log))->toOthers();
+            } catch (Throwable $e) {
+                Log::warning('ActivityLogged broadcast failed: ' . $e->getMessage());
+            }
         } catch (Throwable $e) {
             Log::error('ActivityLogger failed to write a log entry', [
                 'action' => $action,
