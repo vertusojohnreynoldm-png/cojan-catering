@@ -461,6 +461,7 @@ function loadCustomerMessages() {
 }
 
 let lastMessageSenderId = null;
+let lastReadUpto = null; // ISO timestamp from the most recent MessagesRead event this session
 
 function renderMessages(messages) {
     const box = document.getElementById('chat-messages');
@@ -474,6 +475,7 @@ function renderMessages(messages) {
     ).join('');
     box.scrollTop = box.scrollHeight;
     lastMessageSenderId = messages[messages.length - 1].sender_id;
+    updateOwnMessageStatus();
 }
 
 // `grouped` tightens the row's spacing when this message immediately follows
@@ -483,12 +485,36 @@ function messageBubble(m, grouped) {
     const mine = m.sender_id === CUSTOMER_ID;
     const rowClass = grouped ? 'cj-chat-row-grouped' : '';
     const bubbleClass = mine ? 'cj-chat-bubble-mine' : 'cj-chat-bubble-theirs';
-    return `<div class="${rowClass}" style="display:flex;justify-content:${mine ? 'flex-end' : 'flex-start'};">
+    return `<div class="${rowClass}" data-sender="${m.sender_id}" data-ts="${m.timestamp || ''}" data-read-at="${m.read_at || ''}"
+                 style="display:flex;flex-direction:column;align-items:${mine ? 'flex-end' : 'flex-start'};">
         <div class="${bubbleClass}">
             ${m.body}
             <div class="cj-chat-timestamp">${m.created_at}</div>
         </div>
+        ${mine ? '<div class="cj-chat-status"></div>' : ''}
     </div>`;
+}
+
+// Only the customer's single most recent own message ever shows a status
+// line (standard messenger convention) — every older one is cleared first.
+function updateOwnMessageStatus() {
+    const ownRows = Array.from(document.querySelectorAll('#chat-messages [data-sender]'))
+        .filter(r => Number(r.dataset.sender) === CUSTOMER_ID);
+    ownRows.forEach(r => {
+        const statusEl = r.querySelector('.cj-chat-status');
+        if (statusEl) statusEl.innerHTML = '';
+    });
+    if (ownRows.length === 0) return;
+
+    const last = ownRows[ownRows.length - 1];
+    const statusEl = last.querySelector('.cj-chat-status');
+    if (!statusEl) return;
+
+    const seen = !!last.dataset.readAt
+        || (lastReadUpto && last.dataset.ts && new Date(last.dataset.ts) <= new Date(lastReadUpto));
+    statusEl.innerHTML = seen
+        ? '<i class="bi bi-check2-all" aria-hidden="true"></i> Seen'
+        : 'Sent';
 }
 
 function sendCustomerMessage() {
@@ -510,9 +536,14 @@ function subscribeToChannel(uid1, uid2) {
     if (subscribed) return;
     subscribed = true;
     const ids = [uid1, uid2].sort((a, b) => a - b);
-    window.Echo.private(`chat.${ids[0]}.${ids[1]}`).listen('MessageSent', (e) => {
-        appendMessage(e);
-    });
+    window.Echo.private(`chat.${ids[0]}.${ids[1]}`)
+        .listen('MessageSent', (e) => {
+            appendMessage(e);
+        })
+        .listen('MessagesRead', (e) => {
+            lastReadUpto = e.upto;
+            updateOwnMessageStatus();
+        });
 }
 
 function appendMessage(m) {
@@ -523,6 +554,7 @@ function appendMessage(m) {
     box.appendChild(div.firstElementChild);
     box.scrollTop = box.scrollHeight;
     lastMessageSenderId = m.sender_id;
+    updateOwnMessageStatus();
 }
 
 function checkUnread() {

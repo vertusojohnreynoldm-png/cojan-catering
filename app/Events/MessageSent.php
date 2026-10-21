@@ -42,6 +42,7 @@ class MessageSent implements ShouldBroadcastNow
             'sender_id'   => $this->message->sender_id,
             'sender_name' => $this->message->sender->name,
             'created_at'  => $this->message->created_at->format('h:i A'),
+            'timestamp'   => $this->message->created_at->toIso8601String(),
         ];
     }
 }
