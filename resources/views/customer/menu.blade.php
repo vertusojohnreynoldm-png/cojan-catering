@@ -74,7 +74,7 @@
         <div class="cj-card">
             <div class="cj-card-body text-center py-5">
                 <i class="bi bi-search" style="font-size:2.5rem;color:var(--text-light);"></i>
-                <p style="color:var(--text-mid);margin:1rem 0;">
+                <p style="color:var(--text-light);margin:1rem 0;">
                     @if(isset($category))
                         No items found in "{{ $category->name }}" right now.
                     @else

@@ -35,11 +35,11 @@
         <img src="{{ asset('images/logo-removebg-preview.png') }}" alt="Cojan Catering"
              style="width:72px;height:72px;object-fit:contain;margin-bottom:1.25rem;">
 
-        <div style="font-family:'Playfair Display',serif;font-size:3rem;font-weight:700;color:var(--green-mid);line-height:1;margin-bottom:.5rem;">
+        <div style="font-family:'Playfair Display',serif;font-size:3rem;font-weight:700;color:var(--green-mid);line-height:1;margin-bottom:var(--space-2);">
             @yield('code')
         </div>
 
-        <h1 style="font-family:'Playfair Display',serif;font-size:1.4rem;margin-bottom:.5rem;">
+        <h1 style="font-family:'Playfair Display',serif;font-size:var(--fs-lg);margin-bottom:var(--space-2);">
             @yield('heading')
         </h1>
 

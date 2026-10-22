@@ -257,7 +257,7 @@ body.admin-chat-open #admin-chat-btn { display: none !important; }
         <div id="admin-convo" style="display:none;flex-direction:column;flex:1;overflow:hidden;min-width:0;">
             <div id="admin-convo-empty" style="display:flex;flex:1;align-items:center;justify-content:center;
                         flex-direction:column;gap:10px;color:var(--text-muted);text-align:center;padding:20px;">
-                <i class="bi bi-chat-dots" style="font-size:2.2rem;opacity:.4;" aria-hidden="true"></i>
+                <i class="bi bi-chat-dots" style="font-size:2.5rem;color:var(--text-light);" aria-hidden="true"></i>
                 <span style="font-size:.85rem;">Select a conversation to start replying</span>
             </div>
             <div id="admin-convo-active" style="display:none;flex-direction:column;flex:1;overflow:hidden;min-height:0;">

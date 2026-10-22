@@ -9,7 +9,7 @@
 @if($orders->isEmpty())
     <div class="cj-card mt-3">
         <div class="cj-card-body text-center py-5">
-            <div style="font-size:3rem;">📋</div>
+            <div style="font-size:2.5rem;">📋</div>
             <p style="color:var(--text-light);margin:1rem 0;">You have no orders yet.</p>
             <a href="{{ route('customer.menu') }}" class="btn-cj btn-cj">Browse Menu</a>
         </div>

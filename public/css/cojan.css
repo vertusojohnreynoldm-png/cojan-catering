@@ -101,7 +101,7 @@ body {
   min-height: 100vh;
 }
 
-h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: 1.25; }
+h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-xl); }
 
 /* ── NAVBAR ── */
 .cj-nav {
