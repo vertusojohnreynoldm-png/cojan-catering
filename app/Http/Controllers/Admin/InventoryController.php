@@ -28,7 +28,7 @@ class InventoryController extends Controller
             'menu_item_id'        => 'required|exists:menu_items,id',
             'quantity'            => 'required|integer|min:0',
             'low_stock_threshold' => 'required|integer|min:1',
-            'unit'                => 'required|string|max:50',
+            'unit'                => ['required', 'string', 'max:50'],
         ]);
 
         Inventory::updateOrCreate(
@@ -49,7 +49,7 @@ class InventoryController extends Controller
         $request->validate([
             'quantity'            => 'required|integer|min:0',
             'low_stock_threshold' => 'required|integer|min:1',
-            'unit'                => 'required|string|max:50',
+            'unit'                => ['required', 'string', 'max:50'],
         ]);
 
         $inventory = Inventory::findOrFail($id);

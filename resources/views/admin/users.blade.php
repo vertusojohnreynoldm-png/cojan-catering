@@ -89,31 +89,44 @@
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="cj-label">Name <span style="color:var(--required);">*</span></label>
-                        <input type="text" name="name" class="cj-input" required>
+                        <input type="text" name="name" class="cj-input" required value="{{ old('name') }}">
+                        @error('name')
+                            <small style="color:var(--danger);font-size:.78rem;display:block;margin-top:.3rem;">{{ $message }}</small>
+                        @enderror
                     </div>
                     <div class="mb-3">
                         <label class="cj-label">Email <span style="color:var(--required);">*</span></label>
-                        <input type="email" name="email" class="cj-input" required>
+                        <input type="email" name="email" class="cj-input" required value="{{ old('email') }}">
+                        @error('email')
+                            <small style="color:var(--danger);font-size:.78rem;display:block;margin-top:.3rem;">{{ $message }}</small>
+                        @enderror
                     </div>
                     <div class="mb-3">
                         <label class="cj-label">Password <span style="color:var(--required);">*</span></label>
                         <input type="password" name="password" class="cj-input" required>
+                        @error('password')
+                            <small style="color:var(--danger);font-size:.78rem;display:block;margin-top:.3rem;">{{ $message }}</small>
+                        @enderror
                     </div>
                     <div class="mb-3">
                         <label class="cj-label">Role <span style="color:var(--required);">*</span></label>
                         <select name="role" class="cj-select" required>
-                            <option value="customer">Customer</option>
-                            <option value="delivery">Delivery</option>
-                            <option value="admin">Admin</option>
+                            <option value="customer" {{ old('role') === 'customer' ? 'selected' : '' }}>Customer</option>
+                            <option value="delivery" {{ old('role') === 'delivery' ? 'selected' : '' }}>Delivery</option>
+                            <option value="admin" {{ old('role') === 'admin' ? 'selected' : '' }}>Admin</option>
                         </select>
                     </div>
                     <div class="mb-3">
                         <label class="cj-label">Phone</label>
-                        <input type="text" name="phone" class="cj-input">
+                        <input type="tel" name="phone" class="cj-input" inputmode="numeric" maxlength="13"
+                               placeholder="09XXXXXXXXX" value="{{ old('phone') }}">
+                        @error('phone')
+                            <small style="color:var(--danger);font-size:.78rem;display:block;margin-top:.3rem;">{{ $message }}</small>
+                        @enderror
                     </div>
                     <div class="mb-3">
                         <label class="cj-label">Address</label>
-                        <textarea name="address" class="cj-textarea" rows="2"></textarea>
+                        <textarea name="address" class="cj-textarea" rows="2">{{ old('address') }}</textarea>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -129,5 +142,10 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 @vite(['resources/js/app.js'])
+@if($errors->any())
+    <script>
+        new bootstrap.Modal(document.getElementById('addUserModal')).show();
+    </script>
+@endif
 </body>
 </html>

@@ -12,6 +12,7 @@ use App\Services\ActivityLogger;
 use App\Services\BusinessHours;
 use App\Services\DeliverySlots;
 use App\Services\PackageStockService;
+use App\Rules\PhilippineMobileNumber;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -84,8 +85,8 @@ class OrderController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'delivery_address' => 'required|string',
-            'delivery_phone'   => 'required|string',
+            'delivery_address' => ['required', 'string'],
+            'delivery_phone'   => ['required', 'string', new PhilippineMobileNumber],
             'notes'            => 'nullable|string',
             'payment_method'   => 'required|in:cash_on_delivery,gcash',
             'gcash_reference'  => 'required_if:payment_method,gcash|nullable|string|max:100',
@@ -216,7 +217,7 @@ class OrderController extends Controller
                     'delivery_fee'     => $deliveryFee,
                     'total_amount'     => $total,
                     'delivery_address' => $request->delivery_address,
-                    'delivery_phone'   => $request->delivery_phone,
+                    'delivery_phone'   => PhilippineMobileNumber::normalize($request->delivery_phone),
                     'notes'            => $request->notes,
                     'delivery_type'    => $request->delivery_type,
                     'requested_delivery_at'  => $requestedDeliveryAt,

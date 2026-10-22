@@ -23,9 +23,9 @@ class PackageController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'                    => 'required|string|max:255',
+            'name'                    => ['required', 'string', 'max:255'],
             'pax'                     => 'required|integer|min:1',
-            'price'                   => 'required|numeric|min:0',
+            'price'                   => 'required|numeric|gt:0',
             'description'             => 'nullable|string',
             'image'                   => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'menu_item_quantities'    => 'array',
@@ -82,9 +82,9 @@ class PackageController extends Controller
     public function update(Request $request, $id)
     {
         $request->validate([
-            'name'                    => 'required|string|max:255',
+            'name'                    => ['required', 'string', 'max:255'],
             'pax'                     => 'required|integer|min:1',
-            'price'                   => 'required|numeric|min:0',
+            'price'                   => 'required|numeric|gt:0',
             'description'             => 'nullable|string',
             'image'                   => 'nullable|image|mimes:jpeg,png,jpg|max:2048',
             'menu_item_quantities'    => 'array',

@@ -7,6 +7,8 @@ use App\Http\Controllers\Controller;
 use App\Models\CateringPackage;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Rules\PhilippineMobileNumber;
+use App\Rules\ValidPersonName;
 use App\Services\PackageStockService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -41,14 +43,17 @@ class PackageController extends Controller
 
         $validated = $request->validate([
             'package_id'     => 'required|exists:catering_packages,id',
-            'contact_name'   => 'required|string|max:255',
-            'contact_number' => 'required|string|max:20',
-            'venue'          => 'required|string',
+            'contact_name'   => ['required', 'string', 'max:255', new ValidPersonName],
+            'contact_number' => ['required', 'string', 'max:20', new PhilippineMobileNumber],
+            'venue'          => ['required', 'string', 'min:5'],
             'event_date'     => ['required', 'date', 'after_or_equal:' . $minEventDate->toDateTimeString()],
             'event_type'     => 'nullable|string|max:100',
         ], [
             'event_date.after_or_equal' => 'Event date/time must be at least 24 hours from now, to allow prep time.',
+            'venue.min' => 'Please enter a more complete venue address.',
         ]);
+
+        $validated['contact_number'] = PhilippineMobileNumber::normalize($validated['contact_number']);
 
         session()->put('package_booking', $validated);
 

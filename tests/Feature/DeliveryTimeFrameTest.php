@@ -94,7 +94,7 @@ class DeliveryTimeFrameTest extends TestCase
 
         $response = $this->actingAs($user)->post('/customer/orders', [
             'delivery_address' => '123 Test St',
-            'delivery_phone'   => '09111111111',
+            'delivery_phone'   => '09171234567',
             'payment_method'   => 'cash_on_delivery',
             'delivery_type'    => 'scheduled',
             'delivery_date'    => $now->toDateString(),
@@ -118,7 +118,7 @@ class DeliveryTimeFrameTest extends TestCase
 
         $this->actingAs($user)->post('/customer/orders', [
             'delivery_address' => '123 Test St',
-            'delivery_phone'   => '09111111111',
+            'delivery_phone'   => '09171234567',
             'payment_method'   => 'cash_on_delivery',
             'delivery_type'    => 'asap',
         ]);
@@ -140,7 +140,7 @@ class DeliveryTimeFrameTest extends TestCase
         // tampered client request bypassing the chip UI entirely.
         $response = $this->actingAs($user)->post('/customer/orders', [
             'delivery_address' => '123 Test St',
-            'delivery_phone'   => '09111111111',
+            'delivery_phone'   => '09171234567',
             'payment_method'   => 'cash_on_delivery',
             'delivery_type'    => 'scheduled',
             'delivery_date'    => $now->toDateString(),
@@ -160,7 +160,7 @@ class DeliveryTimeFrameTest extends TestCase
 
         $response = $this->actingAs($user)->post('/customer/orders', [
             'delivery_address' => '123 Test St',
-            'delivery_phone'   => '09111111111',
+            'delivery_phone'   => '09171234567',
             'payment_method'   => 'cash_on_delivery',
             'delivery_type'    => 'asap',
         ]);

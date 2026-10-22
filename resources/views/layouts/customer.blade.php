@@ -189,6 +189,41 @@
 @vite(['resources/js/app.js'])
 
 <script>
+// Shared by any page with a PH-mobile-number field (checkout, the catering
+// Avail form) — mirrors App\Rules\PhilippineMobileNumber exactly, including
+// the repeated-digit junk check, so the live hint never says "looks good"
+// for a number the server will actually reject.
+function updatePhoneLiveHint(inputEl, hintEl) {
+    if (!inputEl || !hintEl) return;
+    const cleaned = inputEl.value.replace(/[\s\-()]/g, '');
+    const shapeOk = /^(?:\+?63|0)9\d{9}$/.test(cleaned);
+
+    if (cleaned === '') {
+        hintEl.textContent = 'Format: 09XXXXXXXXX';
+        hintEl.style.color = 'var(--text-light)';
+        return;
+    }
+
+    if (!shapeOk) {
+        hintEl.textContent = 'Format: 09XXXXXXXXX (e.g. 09171234567)';
+        hintEl.style.color = 'var(--required)';
+        return;
+    }
+
+    let digits = cleaned.replace(/\D/g, '');
+    if (digits.startsWith('63') && digits.length === 12) digits = '0' + digits.slice(2);
+    const subscriber = digits.slice(2);
+
+    if (/^(\d)\1{8}$/.test(subscriber)) {
+        hintEl.textContent = "That doesn't look like a real mobile number.";
+        hintEl.style.color = 'var(--required)';
+        return;
+    }
+
+    hintEl.textContent = '✓ Looks good';
+    hintEl.style.color = 'var(--status-green-text)';
+}
+
 function toggleNav() {
     const nav = document.getElementById('mobileNav');
     const isOpen = nav.classList.toggle('open');

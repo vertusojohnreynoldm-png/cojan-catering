@@ -128,15 +128,28 @@
                         <label class="cj-label">Your Name <span style="color:var(--required);">*</span></label>
                         <input type="text" name="contact_name" class="cj-input" required
                                value="{{ old('contact_name', auth()->user()->name) }}">
+                        @error('contact_name')
+                            <small style="color:var(--danger);font-size:.78rem;display:block;margin-top:.3rem;">{{ $message }}</small>
+                        @enderror
                     </div>
                     <div class="mb-3">
                         <label class="cj-label">Contact Number <span style="color:var(--required);">*</span></label>
-                        <input type="text" name="contact_number" class="cj-input" required
+                        <input type="tel" name="contact_number" id="avail-contact-number" class="cj-input" required
+                               inputmode="numeric" maxlength="13"
                                value="{{ old('contact_number', auth()->user()->phone) }}">
+                        <small id="avail-phone-hint" style="font-size:.78rem;color:var(--text-light);display:block;margin-top:.3rem;">
+                            Format: 09XXXXXXXXX
+                        </small>
+                        @error('contact_number')
+                            <small style="color:var(--danger);font-size:.78rem;display:block;margin-top:.3rem;">{{ $message }}</small>
+                        @enderror
                     </div>
                     <div class="mb-3">
                         <label class="cj-label">Event Venue / Address <span style="color:var(--required);">*</span></label>
                         <textarea name="venue" class="cj-textarea" rows="2" required>{{ old('venue') }}</textarea>
+                        @error('venue')
+                            <small style="color:var(--danger);font-size:.78rem;display:block;margin-top:.3rem;">{{ $message }}</small>
+                        @enderror
                     </div>
                     <div class="mb-3">
                         <label class="cj-label">Event Date &amp; Time <span style="color:var(--required);">*</span></label>
@@ -201,6 +214,13 @@
     @if($errors->any())
         new bootstrap.Modal(modal).show();
     @endif
+
+    const phoneInput = document.getElementById('avail-contact-number');
+    const phoneHint = document.getElementById('avail-phone-hint');
+    if (phoneInput) {
+        phoneInput.addEventListener('input', () => updatePhoneLiveHint(phoneInput, phoneHint));
+        updatePhoneLiveHint(phoneInput, phoneHint);
+    }
 })();
 </script>
 @endsection

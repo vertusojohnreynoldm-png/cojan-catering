@@ -85,12 +85,22 @@
                     <div class="mb-3">
                         <label class="cj-label">Delivery Address <span style="color:var(--required);">*</span></label>
                         <textarea name="delivery_address" rows="3" required autocomplete="street-address"
-                            class="cj-textarea">{{ auth()->user()->address }}</textarea>
+                            class="cj-textarea">{{ old('delivery_address', auth()->user()->address) }}</textarea>
+                        @error('delivery_address')
+                            <small style="color:var(--danger);font-size:.78rem;display:block;margin-top:.3rem;">{{ $message }}</small>
+                        @enderror
                     </div>
                     <div class="mb-3">
                         <label class="cj-label">Contact Number <span style="color:var(--required);">*</span></label>
-                        <input type="tel" name="delivery_phone" required inputmode="tel" autocomplete="tel"
-                               value="{{ auth()->user()->phone }}" class="cj-input">
+                        <input type="tel" name="delivery_phone" id="delivery-phone" required inputmode="numeric"
+                               autocomplete="tel" maxlength="13"
+                               value="{{ old('delivery_phone', auth()->user()->phone) }}" class="cj-input">
+                        <small id="phone-hint" style="font-size:.78rem;color:var(--text-light);display:block;margin-top:.3rem;">
+                            Format: 09XXXXXXXXX
+                        </small>
+                        @error('delivery_phone')
+                            <small style="color:var(--danger);font-size:.78rem;display:block;margin-top:.3rem;">{{ $message }}</small>
+                        @enderror
                     </div>
                     <div class="mb-3">
                         <label class="cj-label">Order Notes (Optional)</label>
@@ -252,6 +262,13 @@
     @if(old('delivery_type') === 'scheduled')
         loadSlots();
     @endif
+
+    // Live format hint — mirrors the server-side PhilippineMobileNumber
+    // rule exactly, but never blocks typing or submission on its own.
+    const phoneInput = document.getElementById('delivery-phone');
+    const phoneHint = document.getElementById('phone-hint');
+    phoneInput.addEventListener('input', () => updatePhoneLiveHint(phoneInput, phoneHint));
+    updatePhoneLiveHint(phoneInput, phoneHint);
 })();
 </script>
 @endsection

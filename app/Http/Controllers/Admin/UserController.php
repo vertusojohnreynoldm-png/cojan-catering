@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Rules\PhilippineMobileNumber;
+use App\Rules\ValidPersonName;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -19,11 +21,11 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'     => 'required|string|max:255',
+            'name'     => ['required', 'string', 'max:255', new ValidPersonName],
             'email'    => 'required|email|unique:users,email',
             'password' => 'required|min:6',
             'role'     => 'required|in:admin,customer,delivery',
-            'phone'    => 'nullable|string',
+            'phone'    => ['nullable', 'string', 'max:20', new PhilippineMobileNumber],
             'address'  => 'nullable|string',
         ]);
 
@@ -32,7 +34,7 @@ class UserController extends Controller
             'email'             => $request->email,
             'password'          => Hash::make($request->password),
             'role'              => $request->role,
-            'phone'             => $request->phone,
+            'phone'             => $request->filled('phone') ? PhilippineMobileNumber::normalize($request->phone) : $request->phone,
             'address'           => $request->address,
             // Staff-created accounts skip self-registration's email
             // verification — an admin creating this account on someone's

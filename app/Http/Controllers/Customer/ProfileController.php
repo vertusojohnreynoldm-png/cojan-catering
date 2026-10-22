@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Customer;
 
 use App\Http\Controllers\Controller;
+use App\Rules\PhilippineMobileNumber;
+use App\Rules\ValidPersonName;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -22,9 +24,9 @@ class ProfileController extends Controller
         $user = auth()->user();
 
         $request->validate([
-            'name'             => 'required|string|max:255',
+            'name'             => ['required', 'string', 'max:255', new ValidPersonName],
             'email'            => ['required', 'email', 'max:255', Rule::unique('users', 'email')->ignore($user->id)],
-            'phone'            => 'nullable|string|max:20',
+            'phone'            => ['nullable', 'string', 'max:20', new PhilippineMobileNumber],
             'address'          => 'nullable|string|max:500',
             'current_password' => 'required_with:password|nullable|current_password',
             'password'         => 'nullable|string|min:8|confirmed',
@@ -32,7 +34,7 @@ class ProfileController extends Controller
 
         $user->name = $request->name;
         $user->email = $request->email;
-        $user->phone = $request->phone;
+        $user->phone = $request->filled('phone') ? PhilippineMobileNumber::normalize($request->phone) : $request->phone;
         $user->address = $request->address;
 
         if ($request->filled('password')) {

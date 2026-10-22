@@ -19,9 +19,9 @@ class UtensilController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'name'                => 'required|string|max:255',
+            'name'                => ['required', 'string', 'max:255'],
             'quantity'            => 'required|integer|min:0',
-            'unit'                => 'required|string|max:50',
+            'unit'                => ['required', 'string', 'max:50'],
             'low_stock_threshold' => 'required|integer|min:1',
         ]);
 
@@ -39,7 +39,7 @@ class UtensilController extends Controller
     {
         $request->validate([
             'quantity'            => 'required|integer|min:0',
-            'unit'                => 'required|string|max:50',
+            'unit'                => ['required', 'string', 'max:50'],
             'low_stock_threshold' => 'required|integer|min:1',
         ]);
 

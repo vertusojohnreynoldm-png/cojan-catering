@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Mail\WelcomeMail;
 use App\Models\User;
 use App\Rules\NotCommonEmailTypo;
+use App\Rules\ValidPersonName;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,7 +34,7 @@ class RegisteredUserController extends Controller
         ]);
 
         $request->validate([
-            'name'     => ['required', 'string', 'max:255'],
+            'name'     => ['required', 'string', 'max:255', new ValidPersonName],
             'email'    => ['required', 'string', 'email:rfc,dns', 'max:255', 'unique:'.User::class, new NotCommonEmailTypo],
             'password' => ['required', 'confirmed', Rules\Password::defaults()],
         ]);
