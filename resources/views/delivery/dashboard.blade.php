@@ -81,7 +81,12 @@
                         <tr>
                             <td><strong>{{ $delivery->order->order_number }}</strong></td>
                             <td>{{ $delivery->order->user->name }}</td>
-                            <td>{{ Str::limit($delivery->order->delivery_address, 30) }}</td>
+                            <td>
+                                @if($delivery->order->barangay)
+                                    <span class="badge-cj badge-booking-type">{{ $delivery->order->barangay }}</span><br>
+                                @endif
+                                <small style="color:var(--text-muted);">{{ Str::limit($delivery->order->delivery_address, 30) }}</small>
+                            </td>
                             <td>
                                 <span class="badge-cj {{ $delivery->status === 'delivered' ? 'badge-delivered' : ($delivery->status === 'failed' ? 'badge-cancelled' : 'badge-pending') }}">
                                     {{ ucfirst(str_replace('_', ' ', $delivery->status)) }}

@@ -37,7 +37,13 @@
                     @unless($delivery->order->isBooking())
                         <p><strong>Delivery Time:</strong> {{ $delivery->order->deliveryTimeLabel() }}</p>
                     @endunless
-                    <p><strong>Address:</strong> {{ $delivery->order->delivery_address }}</p>
+                    <p>
+                        <strong>Address:</strong>
+                        @if($delivery->order->barangay)
+                            <span class="badge-cj badge-booking-type">{{ $delivery->order->barangay }}</span>
+                        @endif
+                        {{ $delivery->order->delivery_address }}
+                    </p>
                     @if($delivery->order->notes)
                         <p><strong>Notes:</strong> {{ $delivery->order->notes }}</p>
                     @endif

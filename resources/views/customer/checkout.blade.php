@@ -83,12 +83,58 @@
                 <form method="POST" action="{{ route('customer.orders.store') }}" id="checkout-form">
                     @csrf
                     <div class="mb-3">
-                        <label class="cj-label">Delivery Address <span style="color:var(--required);">*</span></label>
-                        <textarea name="delivery_address" rows="3" required autocomplete="street-address"
-                            class="cj-textarea">{{ old('delivery_address', auth()->user()->address) }}</textarea>
-                        @error('delivery_address')
+                        <label class="cj-label">Delivery Area <span style="color:var(--required);">*</span></label>
+                        @if($hasMenuItems)
+                            <input type="hidden" name="province" value="Occidental Mindoro">
+                            <input type="hidden" name="municipality" value="San Jose">
+                            <p style="font-size:.85rem;color:var(--text-light);margin:0 0 .5rem;">
+                                Menu orders deliver only within San Jose, Occidental Mindoro — just pick your barangay.
+                            </p>
+                            @php $defaultBarangay = old('barangay', auth()->user()->municipality === 'San Jose' ? auth()->user()->barangay : null); @endphp
+                            <select name="barangay" id="checkout-barangay" class="cj-select" required>
+                                <option value="">Select barangay...</option>
+                                @foreach($sanJoseBarangays as $barangayOption)
+                                    <option value="{{ $barangayOption }}" {{ $defaultBarangay === $barangayOption ? 'selected' : '' }}>{{ $barangayOption }}</option>
+                                @endforeach
+                            </select>
+                        @else
+                            <div class="row g-2">
+                                <div class="col-12 col-sm-4">
+                                    <select name="province" id="checkout-province" class="cj-select" required>
+                                        <option value="">Province...</option>
+                                        @foreach(array_keys($cateringAreas) as $provinceOption)
+                                            <option value="{{ $provinceOption }}" {{ old('province') === $provinceOption ? 'selected' : '' }}>{{ $provinceOption }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-12 col-sm-4">
+                                    <select name="municipality" id="checkout-municipality" class="cj-select" required>
+                                        <option value="">Municipality/City...</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-sm-4">
+                                    <select name="barangay" id="checkout-barangay" class="cj-select" required>
+                                        <option value="">Barangay...</option>
+                                    </select>
+                                </div>
+                            </div>
+                        @endif
+                        @error('barangay')
                             <small style="color:var(--danger);font-size:.78rem;display:block;margin-top:.3rem;">{{ $message }}</small>
                         @enderror
+                    </div>
+                    <div class="mb-3">
+                        <label class="cj-label">Street / Purok / House No. <span style="color:var(--required);">*</span></label>
+                        <input type="text" name="street" required autocomplete="street-address"
+                               value="{{ old('street', auth()->user()->street) }}" class="cj-input">
+                        @error('street')
+                            <small style="color:var(--danger);font-size:.78rem;display:block;margin-top:.3rem;">{{ $message }}</small>
+                        @enderror
+                    </div>
+                    <div class="mb-3">
+                        <label class="cj-label">Landmark (Optional)</label>
+                        <input type="text" name="landmark" placeholder="e.g. near the barangay hall"
+                               value="{{ old('landmark', auth()->user()->landmark) }}" class="cj-input">
                     </div>
                     <div class="mb-3">
                         <label class="cj-label">Contact Number <span style="color:var(--required);">*</span></label>
@@ -269,6 +315,18 @@
     const phoneHint = document.getElementById('phone-hint');
     phoneInput.addEventListener('input', () => updatePhoneLiveHint(phoneInput, phoneHint));
     updatePhoneLiveHint(phoneInput, phoneHint);
+
+    @if(!$hasMenuItems)
+        initAddressCascade({
+            provinceSelect: document.getElementById('checkout-province'),
+            municipalitySelect: document.getElementById('checkout-municipality'),
+            barangaySelect: document.getElementById('checkout-barangay'),
+            areas: @json($cateringAreas),
+            oldProvince: @json(old('province', auth()->user()->province)),
+            oldMunicipality: @json(old('municipality', auth()->user()->municipality)),
+            oldBarangay: @json(old('barangay', auth()->user()->barangay)),
+        });
+    @endif
 })();
 </script>
 @endsection

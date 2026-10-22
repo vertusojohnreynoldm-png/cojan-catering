@@ -29,7 +29,13 @@
                     <p class="mb-0"><strong>Event Date &amp; Time:</strong><br>{{ $order->event_date->format('M d, Y \a\t h:i A') }}</p>
                 </div>
                 <div class="col-12 col-md-4">
-                    <p class="mb-0"><strong>Venue:</strong><br>{{ $order->delivery_address }}</p>
+                    <p class="mb-0">
+                        <strong>Venue:</strong>
+                        @if($order->barangay)
+                            <span class="badge-cj badge-booking-type">{{ $order->barangay }}</span>
+                        @endif
+                        <br>{{ $order->delivery_address }}
+                    </p>
                 </div>
                 <div class="col-12 col-md-4">
                     <p class="mb-0">
@@ -97,7 +103,13 @@
                     <p><strong>Customer:</strong> {{ $order->user->name }}</p>
                     <p><strong>Email:</strong> {{ $order->user->email }}</p>
                     <p><strong>Phone:</strong> {{ $order->delivery_phone }}</p>
-                    <p><strong>Address:</strong> {{ $order->delivery_address }}</p>
+                    <p>
+                        <strong>Address:</strong>
+                        @if($order->barangay)
+                            <span class="badge-cj badge-booking-type">{{ $order->barangay }}</span>
+                        @endif
+                        {{ $order->delivery_address }}
+                    </p>
                     @unless($order->isBooking())
                         <p>
                             <strong>Delivery Time:</strong> {{ $order->deliveryTimeLabel() }}

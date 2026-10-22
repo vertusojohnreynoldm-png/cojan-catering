@@ -93,7 +93,10 @@ class DeliveryTimeFrameTest extends TestCase
         $chosenSlot = $slots[0];
 
         $response = $this->actingAs($user)->post('/customer/orders', [
-            'delivery_address' => '123 Test St',
+            'province'         => 'Occidental Mindoro',
+            'municipality'     => 'San Jose',
+            'barangay'         => 'Caminawit',
+            'street'           => '123 Test St',
             'delivery_phone'   => '09171234567',
             'payment_method'   => 'cash_on_delivery',
             'delivery_type'    => 'scheduled',
@@ -117,7 +120,10 @@ class DeliveryTimeFrameTest extends TestCase
         $user = $this->customerWithCart();
 
         $this->actingAs($user)->post('/customer/orders', [
-            'delivery_address' => '123 Test St',
+            'province'         => 'Occidental Mindoro',
+            'municipality'     => 'San Jose',
+            'barangay'         => 'Caminawit',
+            'street'           => '123 Test St',
             'delivery_phone'   => '09171234567',
             'payment_method'   => 'cash_on_delivery',
             'delivery_type'    => 'asap',
@@ -139,7 +145,10 @@ class DeliveryTimeFrameTest extends TestCase
         // would ever generate (wrong 5-minute alignment) — simulates a
         // tampered client request bypassing the chip UI entirely.
         $response = $this->actingAs($user)->post('/customer/orders', [
-            'delivery_address' => '123 Test St',
+            'province'         => 'Occidental Mindoro',
+            'municipality'     => 'San Jose',
+            'barangay'         => 'Caminawit',
+            'street'           => '123 Test St',
             'delivery_phone'   => '09171234567',
             'payment_method'   => 'cash_on_delivery',
             'delivery_type'    => 'scheduled',
@@ -159,7 +168,10 @@ class DeliveryTimeFrameTest extends TestCase
         $user = $this->customerWithCart();
 
         $response = $this->actingAs($user)->post('/customer/orders', [
-            'delivery_address' => '123 Test St',
+            'province'         => 'Occidental Mindoro',
+            'municipality'     => 'San Jose',
+            'barangay'         => 'Caminawit',
+            'street'           => '123 Test St',
             'delivery_phone'   => '09171234567',
             'payment_method'   => 'cash_on_delivery',
             'delivery_type'    => 'asap',

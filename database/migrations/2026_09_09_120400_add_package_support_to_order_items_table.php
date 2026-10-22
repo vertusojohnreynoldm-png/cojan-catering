@@ -2,26 +2,28 @@
 
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
     public function up(): void
     {
-        // Widen menu_item_id to nullable via raw SQL (not ->change(), which
-        // needs doctrine/dbal — not a direct dependency of this project).
-        // MySQL-only syntax, guarded the same way as the gcash enum-widening
-        // migration — SQLite (the test suite's connection, see phpunit.xml)
-        // creates nullable columns correctly via the schema builder already,
-        // so there's nothing to widen there.
         Schema::table('order_items', function (Blueprint $table) {
             $table->dropForeign(['menu_item_id']);
         });
 
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('ALTER TABLE order_items MODIFY menu_item_id BIGINT UNSIGNED NULL');
-        }
+        // doctrine/dbal (dev dependency) makes ->change() portable across
+        // drivers — this previously ran as raw MySQL-only SQL, guarded to a
+        // no-op on SQLite under the mistaken assumption that SQLite already
+        // created the column nullable (it doesn't: the base migration never
+        // called ->nullable()). That left menu_item_id still NOT NULL on
+        // SQLite, which the test suite never caught until a test actually
+        // exercised a package-only (no menu_item_id) order item. Already
+        // applied as the old raw ALTER on the real MySQL dev/Railway DB —
+        // this edit only changes what a *fresh* migration run does.
+        Schema::table('order_items', function (Blueprint $table) {
+            $table->foreignId('menu_item_id')->nullable()->change();
+        });
 
         Schema::table('order_items', function (Blueprint $table) {
             $table->foreign('menu_item_id')
@@ -46,9 +48,9 @@ return new class extends Migration
             $table->dropForeign(['menu_item_id']);
         });
 
-        if (DB::connection()->getDriverName() === 'mysql') {
-            DB::statement('ALTER TABLE order_items MODIFY menu_item_id BIGINT UNSIGNED NOT NULL');
-        }
+        Schema::table('order_items', function (Blueprint $table) {
+            $table->foreignId('menu_item_id')->nullable(false)->change();
+        });
 
         Schema::table('order_items', function (Blueprint $table) {
             $table->foreign('menu_item_id')

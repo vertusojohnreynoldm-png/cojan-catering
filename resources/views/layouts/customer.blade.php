@@ -224,6 +224,56 @@ function updatePhoneLiveHint(inputEl, hintEl) {
     hintEl.style.color = 'var(--status-green-text)';
 }
 
+// Shared by any page with cascading province → municipality → barangay
+// dropdowns (checkout for a package-only cart, the catering Avail form).
+// `areas` is the pre-filtered { province: { municipality: [barangay,...] } }
+// tree already embedded by the server (no network call) — this only
+// filters/repopulates the <select> options, it never invents data the
+// server didn't already approve, so a tampered submission still can't name
+// a combination that passes server-side re-validation.
+function initAddressCascade({ provinceSelect, municipalitySelect, barangaySelect, areas, oldProvince, oldMunicipality, oldBarangay }) {
+    function populateBarangays(province, municipality, selected) {
+        barangaySelect.innerHTML = '<option value="">Select barangay...</option>';
+        const barangays = (areas[province] && areas[province][municipality]) || [];
+        barangays.forEach(b => {
+            const opt = document.createElement('option');
+            opt.value = b;
+            opt.textContent = b;
+            if (b === selected) opt.selected = true;
+            barangaySelect.appendChild(opt);
+        });
+    }
+
+    function populateMunicipalities(province, selectedMunicipality, selectedBarangay) {
+        municipalitySelect.innerHTML = '<option value="">Select municipality/city...</option>';
+        const municipalities = areas[province] ? Object.keys(areas[province]) : [];
+        municipalities.forEach(m => {
+            const opt = document.createElement('option');
+            opt.value = m;
+            opt.textContent = m;
+            if (m === selectedMunicipality) opt.selected = true;
+            municipalitySelect.appendChild(opt);
+        });
+        populateBarangays(province, municipalitySelect.value, municipalitySelect.value === selectedMunicipality ? selectedBarangay : null);
+    }
+
+    // A user-driven change always resets the dependent dropdown(s) below it
+    // — picking a different province means the old municipality/barangay no
+    // longer apply.
+    provinceSelect.addEventListener('change', () => populateMunicipalities(provinceSelect.value, null, null));
+    municipalitySelect.addEventListener('change', () => populateBarangays(provinceSelect.value, municipalitySelect.value, null));
+
+    // Initial restore (old() on a validation failure, or the customer's
+    // saved profile address) sets all three levels together in one pass —
+    // setting provinceSelect.value directly here, not via a synthetic
+    // 'change' event, which would otherwise immediately wipe the
+    // municipality/barangay this same restore is trying to set.
+    if (oldProvince && areas[oldProvince]) {
+        provinceSelect.value = oldProvince;
+        populateMunicipalities(oldProvince, oldMunicipality || null, oldBarangay || null);
+    }
+}
+
 function toggleNav() {
     const nav = document.getElementById('mobileNav');
     const isOpen = nav.classList.toggle('open');

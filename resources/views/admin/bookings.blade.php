@@ -72,7 +72,12 @@
                                         @endif
                                     </small>
                                 </td>
-                                <td>{{ Str::limit($booking->delivery_address, 40) }}</td>
+                                <td>
+                                    @if($booking->barangay)
+                                        <span class="badge-cj badge-booking-type">{{ $booking->barangay }}</span><br>
+                                    @endif
+                                    <small style="color:var(--text-muted);">{{ Str::limit($booking->delivery_address, 40) }}</small>
+                                </td>
                                 <td>{{ $package->name ?? '—' }}</td>
                                 <td>{{ $package->pax ?? '—' }}</td>
                                 <td>₱{{ number_format($booking->total_amount, 2) }}</td>

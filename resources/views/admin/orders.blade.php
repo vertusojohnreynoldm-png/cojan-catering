@@ -46,6 +46,7 @@
                         <tr>
                             <th>Order #</th>
                             <th>Customer</th>
+                            <th>Barangay</th>
                             <th>Delivery Time</th>
                             <th>Total</th>
                             <th>Status</th>
@@ -59,6 +60,13 @@
                             <tr @if($order->isDeliveryDueSoon()) style="background:var(--amber-light);" @endif>
                                 <td><strong>{{ $order->order_number }}</strong></td>
                                 <td>{{ $order->user->name }}</td>
+                                <td>
+                                    @if($order->barangay)
+                                        <span class="badge-cj badge-booking-type">{{ $order->barangay }}</span>
+                                    @else
+                                        <span style="color:var(--text-muted);font-size:.78rem;">—</span>
+                                    @endif
+                                </td>
                                 <td>
                                     {{ $order->deliveryTimeLabel() }}
                                     @if($order->isDeliveryDueSoon())
@@ -94,7 +102,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="8" class="text-center py-4" style="color:var(--text-light)">No orders found</td>
+                                <td colspan="9" class="text-center py-4" style="color:var(--text-light)">No orders found</td>
                             </tr>
                         @endforelse
                     </tbody>

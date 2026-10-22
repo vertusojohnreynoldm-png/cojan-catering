@@ -145,11 +145,46 @@
                         @enderror
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Event Venue / Address <span style="color:var(--required);">*</span></label>
-                        <textarea name="venue" class="cj-textarea" rows="2" required>{{ old('venue') }}</textarea>
-                        @error('venue')
+                        <label class="cj-label">Event Area <span style="color:var(--required);">*</span></label>
+                        <p style="font-size:.78rem;color:var(--text-light);margin:0 0 .5rem;">
+                            We cater anywhere in Occidental Mindoro or Oriental Mindoro.
+                        </p>
+                        <div class="row g-2">
+                            <div class="col-12 col-sm-4">
+                                <select name="province" id="avail-province" class="cj-select" required>
+                                    <option value="">Province...</option>
+                                    @foreach(array_keys($cateringAreas) as $provinceOption)
+                                        <option value="{{ $provinceOption }}" {{ old('province') === $provinceOption ? 'selected' : '' }}>{{ $provinceOption }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <select name="municipality" id="avail-municipality" class="cj-select" required>
+                                    <option value="">Municipality/City...</option>
+                                </select>
+                            </div>
+                            <div class="col-12 col-sm-4">
+                                <select name="barangay" id="avail-barangay" class="cj-select" required>
+                                    <option value="">Barangay...</option>
+                                </select>
+                            </div>
+                        </div>
+                        @error('barangay')
                             <small style="color:var(--danger);font-size:.78rem;display:block;margin-top:.3rem;">{{ $message }}</small>
                         @enderror
+                    </div>
+                    <div class="mb-3">
+                        <label class="cj-label">Street / Purok / Venue Name <span style="color:var(--required);">*</span></label>
+                        <input type="text" name="street" class="cj-input" required
+                               value="{{ old('street') }}">
+                        @error('street')
+                            <small style="color:var(--danger);font-size:.78rem;display:block;margin-top:.3rem;">{{ $message }}</small>
+                        @enderror
+                    </div>
+                    <div class="mb-3">
+                        <label class="cj-label">Landmark (Optional)</label>
+                        <input type="text" name="landmark" class="cj-input" placeholder="e.g. beside the covered court"
+                               value="{{ old('landmark') }}">
                     </div>
                     <div class="mb-3">
                         <label class="cj-label">Event Date &amp; Time <span style="color:var(--required);">*</span></label>
@@ -221,6 +256,16 @@
         phoneInput.addEventListener('input', () => updatePhoneLiveHint(phoneInput, phoneHint));
         updatePhoneLiveHint(phoneInput, phoneHint);
     }
+
+    initAddressCascade({
+        provinceSelect: document.getElementById('avail-province'),
+        municipalitySelect: document.getElementById('avail-municipality'),
+        barangaySelect: document.getElementById('avail-barangay'),
+        areas: @json($cateringAreas),
+        oldProvince: @json(old('province')),
+        oldMunicipality: @json(old('municipality')),
+        oldBarangay: @json(old('barangay')),
+    });
 })();
 </script>
 @endsection

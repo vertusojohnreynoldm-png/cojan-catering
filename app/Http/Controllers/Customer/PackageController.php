@@ -10,6 +10,7 @@ use App\Models\OrderItem;
 use App\Rules\PhilippineMobileNumber;
 use App\Rules\ValidPersonName;
 use App\Services\PackageStockService;
+use App\Services\ServiceArea;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -29,7 +30,9 @@ class PackageController extends Controller
             ->with('menuItems', 'utensils')
             ->get();
 
-        return view('customer.packages', compact('packages'));
+        $cateringAreas = ServiceArea::cateringPsgcForDropdowns();
+
+        return view('customer.packages', compact('packages', 'cateringAreas'));
     }
 
     // Step 1 of the Avail flow: the modal's booking details, staged in the
@@ -45,15 +48,32 @@ class PackageController extends Controller
             'package_id'     => 'required|exists:catering_packages,id',
             'contact_name'   => ['required', 'string', 'max:255', new ValidPersonName],
             'contact_number' => ['required', 'string', 'max:20', new PhilippineMobileNumber],
-            'venue'          => ['required', 'string', 'min:5'],
+            'province'       => ['required', 'string'],
+            'municipality'   => ['required', 'string'],
+            'barangay'       => ['required', 'string'],
+            'street'         => ['required', 'string', 'min:5'],
+            'landmark'       => ['nullable', 'string', 'max:255'],
             'event_date'     => ['required', 'date', 'after_or_equal:' . $minEventDate->toDateTimeString()],
             'event_type'     => 'nullable|string|max:100',
         ], [
             'event_date.after_or_equal' => 'Event date/time must be at least 24 hours from now, to allow prep time.',
-            'venue.min' => 'Please enter a more complete venue address.',
+            'street.min' => 'Please enter a more complete street/purok/house number.',
         ]);
 
+        $areaError = ServiceArea::cateringDeliveryError($validated['province'], $validated['municipality'], $validated['barangay']);
+        if ($areaError) {
+            return back()->withInput()->withErrors(['barangay' => $areaError]);
+        }
+
         $validated['contact_number'] = PhilippineMobileNumber::normalize($validated['contact_number']);
+
+        // 'venue' is what checkout()/store() further down the Avail flow
+        // read as the order's delivery_address — keeping that one combined
+        // key means neither of those methods needs to know the address is
+        // now structured at all.
+        $validated['venue'] = ServiceArea::formatAddress(
+            $validated['street'], $validated['barangay'], $validated['municipality'], $validated['province'], $validated['landmark'] ?? null
+        );
 
         session()->put('package_booking', $validated);
 
@@ -136,6 +156,11 @@ class PackageController extends Controller
                     'delivery_fee'     => 0,
                     'total_amount'     => $package->price,
                     'delivery_address' => $booking['venue'],
+                    'province'         => $booking['province'],
+                    'municipality'     => $booking['municipality'],
+                    'barangay'         => $booking['barangay'],
+                    'street'           => $booking['street'],
+                    'landmark'         => $booking['landmark'] ?? null,
                     'delivery_phone'   => $booking['contact_number'],
                     'contact_name'     => $booking['contact_name'],
                     'event_date'       => $booking['event_date'],
