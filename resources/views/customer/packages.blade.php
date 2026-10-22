@@ -27,7 +27,7 @@
                     📦 Package Deal
                 </span>
                 <div style="position:absolute;top:10px;right:10px;z-index:2;background:var(--green-dark);color:#fff;
-                            border-radius:12px;padding:.4rem .65rem;text-align:center;box-shadow:var(--shadow-md);
+                            border-radius:var(--radius-md);padding:.4rem .65rem;text-align:center;box-shadow:var(--shadow-md);
                             line-height:1;">
                     <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;">{{ $package->pax }}</div>
                     <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.05em;opacity:.85;">pax</div>

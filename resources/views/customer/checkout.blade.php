@@ -5,7 +5,7 @@
 @section('styles')
 <style>
     .delivery-type-card {
-        display: block; cursor: pointer; border: 1.5px solid #ddd; border-radius: 10px;
+        display: block; cursor: pointer; border: 1.5px solid #ddd; border-radius: var(--radius-base);
         padding: 12px 14px; text-align: center; transition: all .2s ease;
     }
     .delivery-type-card.active { border-color: var(--green-dark); background: var(--green-light, #FBE8DE); }

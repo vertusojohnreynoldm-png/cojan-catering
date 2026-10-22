@@ -74,9 +74,7 @@
 
             <div class="d-flex gap-2 flex-wrap">
                 <button type="submit" class="btn-cj btn-cj">Save Changes</button>
-                <a href="{{ route('customer.dashboard') }}"
-                   style="color:var(--green-dark);border:1.5px solid var(--green-dark);
-                          border-radius:10px;padding:8px 18px;text-decoration:none;font-size:.9rem;">
+                <a href="{{ route('customer.dashboard') }}" class="cj-back-link">
                     Cancel
                 </a>
             </div>

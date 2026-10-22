@@ -23,7 +23,7 @@
 <div class="cj-card mb-3">
     <div class="cj-card-header">Live Rider Location</div>
     <div class="cj-card-body">
-        <div id="delivery-map" style="height:320px;border-radius:10px;{{ $trackingActive ? '' : 'display:none;' }}"></div>
+        <div id="delivery-map" style="height:320px;border-radius:var(--radius-base);{{ $trackingActive ? '' : 'display:none;' }}"></div>
         <p id="delivery-map-updated" style="font-size:.78rem;color:var(--text-light);margin-top:.5rem;margin-bottom:0;{{ $trackingActive ? '' : 'display:none;' }}"></p>
         <p id="delivery-map-waiting" style="color:var(--text-light);margin:0;{{ $trackingActive ? 'display:none;' : '' }}">
             Live tracking will appear once your order is picked up.

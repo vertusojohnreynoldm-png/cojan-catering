@@ -12,17 +12,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/cojan.css') }}">
     <style>
-        .cj-nav { background: #92400e; }
-        .cj-nav-brand span { color: #E8A93B; }
-        /* Same contrast fix as .stat-amber/.stat-green in cojan.css — the
-           original lighter stops failed 4.5:1 for the small uppercase label. */
-        .stat-card.stat-del1 { background: linear-gradient(135deg, #b45309, #92400e); }
-        .stat-card.stat-del2 { background: linear-gradient(135deg, #15803d, #14532d); }
-        .cj-card-header { background: #92400e; }
-        .cj-table thead tr { background: #92400e; }
-        .cj-table tbody tr:hover { background: #fef3c7; }
-        .scan-box { background: white; border-radius: 12px; padding: 1.5rem; border: 2px dashed rgba(217,119,6,.3); margin-bottom: 1.5rem; }
-        .scan-box h5 { font-family: 'Playfair Display', serif; color: #92400e; margin-bottom: 1rem; }
+        .scan-box { background: white; border-radius: var(--radius-md); padding: 1.5rem; border: 2px dashed rgba(122,46,29,.25); margin-bottom: 1.5rem; }
+        .scan-box h5 { font-family: 'Playfair Display', serif; color: var(--green-dark); margin-bottom: 1rem; }
     </style>
 </head>
 <body>
@@ -41,13 +32,13 @@
 
     <div class="row g-3 mb-4">
         <div class="col-6">
-            <div class="stat-card stat-del1">
+            <div class="stat-card stat-amber">
                 <h5>Pending Deliveries</h5>
                 <div class="stat-num">{{ $pendingDeliveries }}</div>
             </div>
         </div>
         <div class="col-6">
-            <div class="stat-card stat-del2">
+            <div class="stat-card stat-green">
                 <h5>Completed</h5>
                 <div class="stat-num">{{ $completedDeliveries }}</div>
             </div>

@@ -32,7 +32,7 @@
         </select>
         <button type="submit" class="btn-cj btn-cj btn-cj-sm">Filter</button>
         <a href="{{ route('admin.orders') }}"
-           style="color:var(--green-dark);border:1.5px solid var(--green-dark);border-radius:10px;
+           style="color:var(--green-dark);border:1.5px solid var(--green-dark);border-radius:var(--radius-base);
                   padding:.3rem .75rem;text-decoration:none;font-size:.78rem;display:inline-flex;align-items:center;">
             Clear
         </a>
@@ -72,7 +72,7 @@
                                         @if($order->delivery?->proof_photo_path)
                                             <a href="{{ route('admin.orders.show', $order->id) }}" title="View delivery proof photo">
                                                 <img src="{{ route('orders.proof-photo', $order->id) }}" alt="Delivery proof thumbnail"
-                                                     style="width:32px;height:32px;object-fit:cover;border-radius:6px;box-shadow:var(--shadow-sm);">
+                                                     style="width:32px;height:32px;object-fit:cover;border-radius:var(--radius-sm);box-shadow:var(--shadow-sm);">
                                             </a>
                                         @endif
                                     </div>

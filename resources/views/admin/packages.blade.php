@@ -121,7 +121,7 @@
                         <div class="col-12 col-md-6">
                             <label class="cj-label">Included Menu Items <span style="color:var(--required);">*</span></label>
                             <p style="font-size:.78rem;color:var(--text-light);margin-bottom:.5rem;">Set a quantity for each dish to include; leave at 0 to exclude.</p>
-                            <div style="max-height:220px;overflow-y:auto;border:1.5px solid #d1d5db;border-radius:6px;padding:.5rem .75rem;">
+                            <div style="max-height:220px;overflow-y:auto;border:1.5px solid #d1d5db;border-radius:var(--radius-sm);padding:.5rem .75rem;">
                                 @foreach($menuItems as $menuItem)
                                     <div class="d-flex justify-content-between align-items-center py-1">
                                         <span style="font-size:.85rem;">{{ $menuItem->name }}</span>
@@ -134,7 +134,7 @@
                         <div class="col-12 col-md-6">
                             <label class="cj-label">Included Utensils <span style="color:var(--required);">*</span></label>
                             <p style="font-size:.78rem;color:var(--text-light);margin-bottom:.5rem;">Quantity needed per order of this package.</p>
-                            <div style="max-height:220px;overflow-y:auto;border:1.5px solid #d1d5db;border-radius:6px;padding:.5rem .75rem;">
+                            <div style="max-height:220px;overflow-y:auto;border:1.5px solid #d1d5db;border-radius:var(--radius-sm);padding:.5rem .75rem;">
                                 @foreach($utensils as $utensil)
                                     <div class="d-flex justify-content-between align-items-center py-1">
                                         <span style="font-size:.85rem;">{{ $utensil->name }}</span>

@@ -34,7 +34,7 @@
     <div class="row g-2">
         <div class="col-6">
             <label for="pay-cod" class="payment-option-card {{ $selectedPayment === 'cash_on_delivery' ? 'active' : '' }}"
-                   style="display:block;cursor:pointer;border:1.5px solid #ddd;border-radius:10px;
+                   style="display:block;cursor:pointer;border:1.5px solid #ddd;border-radius:var(--radius-base);
                           padding:12px 14px;text-align:center;transition:all .2s ease;">
                 <input type="radio" id="pay-cod" name="payment_method" value="cash_on_delivery"
                        class="visually-hidden payment-option-input"
@@ -45,7 +45,7 @@
         </div>
         <div class="col-6">
             <label for="pay-gcash" class="payment-option-card {{ $selectedPayment === 'gcash' ? 'active' : '' }}"
-                   style="display:block;cursor:pointer;border:1.5px solid #ddd;border-radius:10px;
+                   style="display:block;cursor:pointer;border:1.5px solid #ddd;border-radius:var(--radius-base);
                           padding:12px 14px;text-align:center;transition:all .2s ease;">
                 <input type="radio" id="pay-gcash" name="payment_method" value="gcash"
                        class="visually-hidden payment-option-input"
@@ -58,7 +58,7 @@
 </div>
 
 <div id="gcash-panel" style="{{ $selectedPayment === 'gcash' ? '' : 'display:none;' }}
-            background:#f4f9f6;border-radius:10px;padding:14px;margin-bottom:1rem;text-align:center;">
+            background:#f4f9f6;border-radius:var(--radius-base);padding:14px;margin-bottom:1rem;text-align:center;">
     @if($gcashQr)
         <div id="gcash-qr-wrap" style="position:relative;display:inline-block;max-width:200px;width:100%;margin-bottom:.75rem;">
             <div id="gcash-qr-real" role="img" aria-label="QR code for GCash payment"

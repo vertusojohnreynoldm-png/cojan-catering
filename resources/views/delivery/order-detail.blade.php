@@ -11,13 +11,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/cojan.css') }}">
-    <style>
-        .cj-nav { background: #92400e; }
-        .cj-nav-brand span { color: #E8A93B; }
-        .cj-card-header { background: #92400e; }
-        .cj-table thead tr { background: #92400e; }
-        .cj-table tbody tr:hover { background: #fef3c7; }
-    </style>
 </head>
 <body>
 <nav class="cj-nav">
@@ -101,7 +94,7 @@
             <div class="cj-card-body">
                 @if($delivery->proof_photo_path)
                     <img src="{{ route('orders.proof-photo', $delivery->order_id) }}" alt="Proof of delivery photo"
-                         style="width:100%;max-width:320px;border-radius:10px;display:block;margin-bottom:.75rem;box-shadow:var(--shadow-sm);">
+                         style="width:100%;max-width:320px;border-radius:var(--radius-base);display:block;margin-bottom:.75rem;box-shadow:var(--shadow-sm);">
                 @endif
                 @if($delivery->received_by)
                     <p><strong>Received by:</strong> {{ $delivery->received_by }}</p>
@@ -124,7 +117,7 @@
                     <label for="pod-photo-input" id="pod-camera-btn"
                            style="display:flex;flex-direction:column;align-items:center;justify-content:center;
                                   gap:.5rem;width:100%;min-height:120px;border:2px dashed var(--green-dark);
-                                  border-radius:12px;cursor:pointer;background:var(--cream);color:var(--green-dark);">
+                                  border-radius:var(--radius-md);cursor:pointer;background:var(--cream);color:var(--green-dark);">
                         <i class="bi bi-camera-fill" style="font-size:2rem;" aria-hidden="true"></i>
                         <span style="font-weight:600;">Take Delivery Photo</span>
                     </label>
@@ -132,7 +125,7 @@
                 </div>
 
                 <div id="pod-preview-area" style="display:none;margin-top:.75rem;text-align:center;">
-                    <img id="pod-preview-img" alt="Delivery photo preview" style="max-width:100%;max-height:320px;border-radius:10px;box-shadow:var(--shadow-sm);">
+                    <img id="pod-preview-img" alt="Delivery photo preview" style="max-width:100%;max-height:320px;border-radius:var(--radius-base);box-shadow:var(--shadow-sm);">
                     <div style="margin-top:.5rem;">
                         <button type="button" id="pod-retake-btn" class="btn-cj-outline btn-cj btn-cj-sm">Retake Photo</button>
                     </div>
@@ -396,6 +389,8 @@
             accuracyEl.style.color = '#15803d';
         } else {
             accuracyEl.textContent = `Waiting for a better GPS signal (±${rounded} m)... try going outside or enabling precise location.`;
+            // Matches --status-amber-text in cojan.css (same "pending/warning"
+            // status color) — literal here since this is inline JS, not CSS.
             accuracyEl.style.color = '#92400e';
         }
         accuracyEl.style.display = 'block';

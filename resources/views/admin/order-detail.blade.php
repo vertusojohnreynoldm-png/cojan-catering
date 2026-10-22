@@ -54,7 +54,7 @@
                 @if($order->delivery->proof_photo_path)
                     <div class="col-12 col-sm-5">
                         <img src="{{ route('orders.proof-photo', $order->id) }}" alt="Proof of delivery photo"
-                             style="width:100%;border-radius:10px;box-shadow:var(--shadow-sm);display:block;">
+                             style="width:100%;border-radius:var(--radius-base);box-shadow:var(--shadow-sm);display:block;">
                     </div>
                 @endif
                 <div class="col-12 {{ $order->delivery->proof_photo_path ? 'col-sm-7' : '' }}">
@@ -217,7 +217,7 @@
         <div class="cj-card-body text-center py-4">
             @if($order->qr_code)
                 <div style="display:inline-block;padding:16px;background:#fff;
-                            border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+                            border-radius:var(--radius-md);box-shadow:0 2px 12px rgba(0,0,0,0.08);">
                     {!! $order->qr_code !!}
                 </div>
                 <p style="color:var(--text-light);font-size:.8rem;margin-top:1rem;">Scan to track this order</p>

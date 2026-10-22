@@ -256,7 +256,7 @@ body.admin-chat-open #admin-chat-btn { display: none !important; }
         <!-- Conversation View (hidden by default on mobile/tablet; forced visible ≥992px) -->
         <div id="admin-convo" style="display:none;flex-direction:column;flex:1;overflow:hidden;min-width:0;">
             <div id="admin-convo-empty" style="display:flex;flex:1;align-items:center;justify-content:center;
-                        flex-direction:column;gap:10px;color:#aaa;text-align:center;padding:20px;">
+                        flex-direction:column;gap:10px;color:var(--text-muted);text-align:center;padding:20px;">
                 <i class="bi bi-chat-dots" style="font-size:2.2rem;opacity:.4;" aria-hidden="true"></i>
                 <span style="font-size:.85rem;">Select a conversation to start replying</span>
             </div>
@@ -456,7 +456,7 @@ function renderInboxList() {
     const list = document.getElementById('admin-customer-list');
     list.innerHTML = '';
     if (inboxData.length === 0) {
-        list.innerHTML = '<div style="padding:20px;text-align:center;color:#aaa;font-size:.85rem;">No messages yet.</div>';
+        list.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-muted);font-size:.85rem;">No messages yet.</div>';
         return;
     }
     inboxData.forEach(c => list.appendChild(buildInboxRow(c)));
@@ -493,7 +493,7 @@ function buildInboxRow(c) {
     nameEl.style.cssText = 'font-size:.9rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;';
     nameEl.textContent = c.name;
     const timeEl = document.createElement('span');
-    timeEl.style.cssText = 'font-size:.72rem;color:#999;flex-shrink:0;';
+    timeEl.style.cssText = 'font-size:.72rem;color:var(--text-muted);flex-shrink:0;';
     timeEl.textContent = relTime(c.timestamp);
     topLine.appendChild(nameEl);
     topLine.appendChild(timeEl);
@@ -502,7 +502,7 @@ function buildInboxRow(c) {
     bottomLine.style.cssText = 'display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:2px;';
     const previewEl = document.createElement('span');
     previewEl.className = 'cj-inbox-preview';
-    previewEl.style.cssText = 'font-size:.78rem;color:#888;overflow:hidden;text-overflow:ellipsis;'
+    previewEl.style.cssText = 'font-size:.78rem;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;'
         + 'white-space:nowrap;flex:1;min-width:0;display:block;';
     previewEl.textContent = c.preview || '';
     bottomLine.appendChild(previewEl);
@@ -576,7 +576,7 @@ let lastAdminMessageSenderId = null;
 function renderAdminMessages(messages) {
     const box = document.getElementById('admin-messages');
     if (messages.length === 0) {
-        box.innerHTML = '<div style="text-align:center;color:#aaa;font-size:.82rem;margin-top:30px;">No messages yet.</div>';
+        box.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:.82rem;margin-top:30px;">No messages yet.</div>';
         lastAdminMessageSenderId = null;
         return;
     }

@@ -466,7 +466,7 @@ let lastReadUpto = null; // ISO timestamp from the most recent MessagesRead even
 function renderMessages(messages) {
     const box = document.getElementById('chat-messages');
     if (messages.length === 0) {
-        box.innerHTML = '<div style="text-align:center;color:#aaa;font-size:.82rem;margin-top:30px;">No messages yet.<br>Say hi! 👋</div>';
+        box.innerHTML = '<div style="text-align:center;color:var(--text-muted);font-size:.82rem;margin-top:30px;">No messages yet.<br>Say hi! 👋</div>';
         lastMessageSenderId = null;
         return;
     }

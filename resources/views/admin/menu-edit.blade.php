@@ -73,9 +73,7 @@
                 </div>
                 <div class="d-flex gap-2 mt-3">
                     <button type="submit" class="btn-cj btn-cj">Save Changes</button>
-                    <a href="{{ route('admin.menu') }}"
-                       style="color:var(--green-dark);border:1.5px solid var(--green-dark);
-                              border-radius:10px;padding:.45rem 1.1rem;text-decoration:none;font-size:.85rem;">
+                    <a href="{{ route('admin.menu') }}" class="cj-back-link">
                         Cancel
                     </a>
                 </div>

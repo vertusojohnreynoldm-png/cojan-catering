@@ -82,7 +82,7 @@
                 @if($order->qr_code)
                     <div role="img" aria-label="QR code to track order {{ $order->order_number }}"
                          style="display:inline-block;padding:16px;background:#fff;
-                                border-radius:12px;box-shadow:0 2px 12px rgba(0,0,0,0.08);">
+                                border-radius:var(--radius-md);box-shadow:0 2px 12px rgba(0,0,0,0.08);">
                         <div aria-hidden="true">{!! $order->qr_code !!}</div>
                     </div>
                     <p style="color:var(--text-light);font-size:.8rem;margin-top:1rem;">

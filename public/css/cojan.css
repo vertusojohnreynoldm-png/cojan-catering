@@ -31,6 +31,28 @@
      into --danger, which is a visibly different shade and would be a real,
      if small, color change rather than a pure consolidation. */
   --required:     #e74c3c;
+
+  /* ── STATUS COLOR MAP ──
+     One background/text pair per semantic status, shared by order/booking/
+     stock badges, alerts, and (for amber) the rider's GPS-accuracy warning
+     text. Picking a new status color means touching these lines once,
+     instead of hunting every badge/alert/chart that hardcoded the hex.
+     admin/analytics.blade.php's JS statusColorMap intentionally mirrors
+     the *-text values below (JS can't read CSS custom properties without
+     extra plumbing) — keep them in sync if either changes. */
+  --status-amber-bg:    #fef3c7;
+  --status-amber-text:  #92400e;
+  --status-blue-bg:     #dbeafe;
+  --status-blue-text:   #1e40af;
+  --status-purple-bg:   #ede9fe;
+  --status-purple-text: #5b21b6;
+  --status-pink-bg:     #fce7f3;
+  --status-pink-text:   #9d174d;
+  --status-green-bg:    #d1fae5;
+  --status-green-text:  #065f46;
+  --status-red-bg:      #fee2e2;
+  --status-red-text:    #991b1b;
+
   --shadow-sm:    0 2px 8px rgba(122,46,29,.08);
   --shadow-md:    0 6px 24px rgba(122,46,29,.12);
   --shadow-lg:    0 16px 48px rgba(122,46,29,.16);
@@ -242,9 +264,9 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: 1.25; }
 .stat-blue  { background: linear-gradient(135deg, #2563eb, #1d4ed8); }
 /* Contrast fix: the h5 label is small text (needs 4.5:1), and the previous
    lighter gradient stops (#16a34a / #d97706 / #0891b2) plus the label's old
-   opacity:.85 fell as low as ~2.7:1 against white. Darkened stops (shared
-   with other dark accent colors already used elsewhere in the app, e.g.
-   #92400e is the delivery role's nav color) restore 5:1+ at both ends. */
+   opacity:.85 fell as low as ~2.7:1 against white. Darkened stops restore
+   5:1+ at both ends. Also reused directly (not duplicated) by the rider
+   dashboard's own stat cards — see delivery/dashboard.blade.php. */
 .stat-green { background: linear-gradient(135deg, #15803d, #14532d); }
 .stat-amber { background: linear-gradient(135deg, #b45309, #92400e); color: var(--white); }
 .stat-teal  { background: linear-gradient(135deg, #0e7490, #164e63); }
@@ -266,30 +288,32 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: 1.25; }
   font-weight: 600;
   letter-spacing: .03em;
 }
-.badge-pending  { background: #fef3c7; color: #92400e; }
-.badge-confirmed{ background: #dbeafe; color: #1e40af; }
-.badge-preparing{ background: #ede9fe; color: #5b21b6; }
-.badge-delivery { background: #fce7f3; color: #9d174d; }
-.badge-delivered{ background: #d1fae5; color: #065f46; }
-.badge-cancelled{ background: #fee2e2; color: #991b1b; }
-.badge-unpaid   { background: #fef3c7; color: #92400e; }
-.badge-paid     { background: #d1fae5; color: #065f46; }
+.badge-pending  { background: var(--status-amber-bg); color: var(--status-amber-text); }
+.badge-confirmed{ background: var(--status-blue-bg); color: var(--status-blue-text); }
+.badge-preparing{ background: var(--status-purple-bg); color: var(--status-purple-text); }
+.badge-delivery { background: var(--status-pink-bg); color: var(--status-pink-text); }
+.badge-delivered{ background: var(--status-green-bg); color: var(--status-green-text); }
+.badge-cancelled{ background: var(--status-red-bg); color: var(--status-red-text); }
+.badge-unpaid   { background: var(--status-amber-bg); color: var(--status-amber-text); }
+.badge-paid     { background: var(--status-green-bg); color: var(--status-green-text); }
 .badge-admin    { background: #1a5c38; color: var(--white); }
-.badge-customer { background: #d1fae5; color: #065f46; }
-.badge-delivery-role { background: #fef3c7; color: #92400e; }
-.badge-instock  { background: #d1fae5; color: #065f46; }
-.badge-lowstock { background: #fee2e2; color: #991b1b; }
+.badge-customer { background: var(--status-green-bg); color: var(--status-green-text); }
+.badge-delivery-role { background: var(--status-amber-bg); color: var(--status-amber-text); }
+.badge-instock  { background: var(--status-green-bg); color: var(--status-green-text); }
+.badge-lowstock { background: var(--status-red-bg); color: var(--status-red-text); }
 /* Type tag, not a status color — distinguishes a booking from a regular
    order at a glance in mixed lists (e.g. the dashboard's Recent Orders),
-   deliberately outside the pending/confirmed/etc. status color language. */
-.badge-booking-type { background: #ede9fe; color: #5b21b6; }
+   deliberately outside the pending/confirmed/etc. status color language.
+   (Reuses the purple pair's values via the shared token purely to avoid a
+   second hardcoded copy of the same hex — still its own class.) */
+.badge-booking-type { background: var(--status-purple-bg); color: var(--status-purple-text); }
 
 /* Activity log category badges — a distinct 4-color language (blue/
    terracotta/amber/teal) from the order-status badges above, so a glance at
    the log never gets confused with a glance at an order list. */
-.badge-activity-auth   { background: #dbeafe; color: #1e40af; }
+.badge-activity-auth   { background: var(--status-blue-bg); color: var(--status-blue-text); }
 .badge-activity-orders { background: var(--green-light); color: var(--green-dark); }
-.badge-activity-admin  { background: var(--amber-light); color: #92400e; }
+.badge-activity-admin  { background: var(--amber-light); color: var(--status-amber-text); }
 .badge-activity-stock  { background: #ccfbf1; color: #0f766e; }
 
 /* Dashboard "Recent Activity" widget rows */
@@ -310,10 +334,10 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: 1.25; }
 
 /* ── ALERTS ── */
 .alert-cj { padding: .85rem 1.1rem; border-radius: var(--radius-sm); margin-bottom: 1rem; font-size: .9rem; display: flex; align-items: center; gap: .6rem; }
-.alert-success { background: #d1fae5; color: #065f46; border-left: 4px solid #10b981; }
-.alert-danger   { background: #fee2e2; color: #991b1b; border-left: 4px solid #ef4444; }
-.alert-warning  { background: #fef3c7; color: #92400e; border-left: 4px solid #f59e0b; }
-.alert-info     { background: #dbeafe; color: #1e40af; border-left: 4px solid #3b82f6; }
+.alert-success { background: var(--status-green-bg); color: var(--status-green-text); border-left: 4px solid #10b981; }
+.alert-danger   { background: var(--status-red-bg); color: var(--status-red-text); border-left: 4px solid #ef4444; }
+.alert-warning  { background: var(--status-amber-bg); color: var(--status-amber-text); border-left: 4px solid #f59e0b; }
+.alert-info     { background: var(--status-blue-bg); color: var(--status-blue-text); border-left: 4px solid #3b82f6; }
 
 /* ── FORMS ── */
 .cj-label { display: block; font-size: var(--fs-sm); font-weight: 500; color: var(--text-mid); margin-bottom: .35rem; }
@@ -499,7 +523,7 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: 1.25; }
 .menu-card-btn:hover { background: var(--green-mid); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
 .menu-card-btn:disabled {
   background: #ccc;
-  color: #888;
+  color: var(--text-muted);
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
@@ -597,7 +621,7 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: 1.25; }
 }
 .track-circle.done { background: var(--green-dark); color: #fff; }
 .track-circle.current { background: var(--green-mid); color: #fff; }
-.track-circle.pending { background: #f0f0f0; color: #aaa; border: 2px solid #ddd; }
+.track-circle.pending { background: #f0f0f0; color: var(--text-muted); border: 2px solid #ddd; }
 .track-label { font-size: .72rem; text-align: center; color: var(--text-light); max-width: 60px; }
 .track-label.done { color: var(--green-dark); font-weight: 600; }
 .track-line { flex-grow: 1; height: 3px; background: #ddd; margin-top: -1.75rem; position: relative; top: 20px; z-index: 0; }
@@ -703,7 +727,7 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: 1.25; }
   justify-content: center;
 }
 .cj-stepper-btn:hover:not(:disabled) { background: var(--green-light); }
-.cj-stepper-btn:disabled { color: #ccc; cursor: not-allowed; }
+.cj-stepper-btn:disabled { color: var(--text-muted); cursor: not-allowed; }
 @media (prefers-reduced-motion: no-preference) {
   .cj-stepper-btn:active:not(:disabled) { transform: scale(.9); }
 }

@@ -14,7 +14,7 @@
             @if($order->delivery->proof_photo_path)
                 <div class="col-12 col-sm-5">
                     <img src="{{ route('orders.proof-photo', $order->id) }}" alt="Proof of delivery photo"
-                         style="width:100%;border-radius:10px;box-shadow:var(--shadow-sm);display:block;">
+                         style="width:100%;border-radius:var(--radius-base);box-shadow:var(--shadow-sm);display:block;">
                 </div>
             @endif
             <div class="col-12 {{ $order->delivery->proof_photo_path ? 'col-sm-7' : '' }}">
