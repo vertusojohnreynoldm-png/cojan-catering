@@ -660,6 +660,51 @@ setInterval(checkUnread, 30000);
 checkUnread();
 </script>
 
+<script>
+/* Submit-once forms (checkout, package checkout, Avail): after the FIRST
+   real submit, every submit button in the form is disabled and shows a
+   spinner + its data-loading-text, and any further submit is swallowed.
+   Listens on document (bubble phase) so it only reacts once a page's own
+   submit handlers have had their say — if one of them called
+   preventDefault() (e.g. "pick a delivery window first"), the form stays
+   usable. The server-side one-time token is the real guarantee; this is
+   the visible half. */
+(function () {
+    document.addEventListener('submit', function (e) {
+        const form = e.target;
+        if (!form.matches('form[data-submit-once]') || e.defaultPrevented) return;
+
+        if (form.dataset.submitting === '1') {
+            e.preventDefault();
+            return;
+        }
+        form.dataset.submitting = '1';
+
+        form.querySelectorAll('button[type=submit]').forEach(function (btn) {
+            btn.dataset.originalHtml = btn.innerHTML;
+            btn.disabled = true;
+            btn.setAttribute('aria-busy', 'true');
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> '
+                + (btn.dataset.loadingText || 'Please wait…');
+        });
+    });
+
+    // Coming Back to the page from the browser's cache (bfcache) would
+    // otherwise leave the buttons stuck disabled.
+    window.addEventListener('pageshow', function (e) {
+        if (!e.persisted) return;
+        document.querySelectorAll('form[data-submit-once]').forEach(function (form) {
+            delete form.dataset.submitting;
+            form.querySelectorAll('button[type=submit]').forEach(function (btn) {
+                if (btn.dataset.originalHtml) btn.innerHTML = btn.dataset.originalHtml;
+                btn.disabled = btn.hasAttribute('data-keep-disabled');
+                btn.removeAttribute('aria-busy');
+            });
+        });
+    });
+})();
+</script>
+
 @yield('scripts')
 </body>
 </html>

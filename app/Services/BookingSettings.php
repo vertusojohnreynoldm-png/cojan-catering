@@ -41,6 +41,16 @@ class BookingSettings
             'label' => 'Maximum advance booking (months)',
             'help' => 'How far into the future a catering event can be booked.',
         ],
+        'max_pending_catering_bookings' => [
+            'default' => 2, 'min' => 1, 'max' => 20,
+            'label' => 'Max pending catering bookings per customer',
+            'help' => 'A customer can\'t book another package while this many of their bookings are still Pending.',
+        ],
+        'max_pending_menu_orders' => [
+            'default' => 3, 'min' => 1, 'max' => 20,
+            'label' => 'Max pending menu orders per customer',
+            'help' => 'A customer can\'t place another menu order while this many of their orders are still Pending.',
+        ],
     ];
 
     public static function get(string $key): int

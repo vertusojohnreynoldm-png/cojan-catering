@@ -151,6 +151,8 @@ class BookingCapacityTest extends TestCase
             'max_orders_per_time_frame'    => 8,
             'catering_min_lead_days'       => 2,
             'catering_max_advance_months'  => 12,
+            'max_pending_catering_bookings' => 2,
+            'max_pending_menu_orders'      => 3,
         ])->assertRedirect(route('admin.booking-rules'));
 
         $this->assertSame(5, BookingSettings::get('max_catering_events_per_date'));
@@ -168,6 +170,8 @@ class BookingCapacityTest extends TestCase
             'max_orders_per_time_frame'    => 10,
             'catering_min_lead_days'       => 3,
             'catering_max_advance_months'  => 6,
+            'max_pending_catering_bookings' => 2,
+            'max_pending_menu_orders'      => 3,
         ])->assertSessionHasErrors('max_catering_events_per_date');
 
         $this->assertSame(3, BookingSettings::get('max_catering_events_per_date'));
@@ -327,12 +331,23 @@ class BookingCapacityTest extends TestCase
             }
         });
 
-        DB::transaction(fn () => BookingCapacity::reserveCatering(Carbon::parse('2026-11-20 15:00'), $this->customer()->id));
+        $customerId = $this->customer()->id;
 
-        $this->assertCount(1, $lockQueries);
-        $this->assertSame(['catering:2026-11-20'], $lockQueries[0]['bindings']);
-        $this->assertGreaterThanOrEqual(1, $lockQueries[0]['level'], 'The lock must be taken inside a transaction.');
+        // First booking for this date: the lock row is created, then locked.
+        DB::transaction(fn () => BookingCapacity::reserveCatering(Carbon::parse('2026-11-20 15:00'), $customerId));
+
+        $this->assertNotEmpty($lockQueries);
+        foreach ($lockQueries as $query) {
+            $this->assertSame(['catering:2026-11-20'], $query['bindings']);
+            $this->assertGreaterThanOrEqual(1, $query['level'], 'The lock must be taken inside a transaction.');
+        }
         $this->assertTrue(DB::table('booking_locks')->where('key', 'catering:2026-11-20')->exists());
+
+        // Row already exists: a single SELECT ... FOR UPDATE, no INSERT
+        // first (INSERT IGNORE on an existing row is what deadlocked).
+        $lockQueries = [];
+        DB::transaction(fn () => BookingCapacity::reserveCatering(Carbon::parse('2026-11-20 18:00'), $customerId + 999));
+        $this->assertCount(1, $lockQueries);
     }
 
     public function test_lock_query_uses_for_update_on_mysql(): void

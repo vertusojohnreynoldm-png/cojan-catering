@@ -16,6 +16,16 @@
 <h1 class="cj-page-title">Catering Packages</h1>
 <p class="cj-page-sub">Pax-based packages for events — dishes, chafing dishes, and utensils all included</p>
 
+@if($pendingLimitError)
+    <div class="alert-cj alert-warning" role="status" id="pending-limit-note" style="align-items:flex-start;">
+        <i class="bi bi-hourglass-split" style="margin-top:2px;"></i>
+        <div>
+            {{ $pendingLimitError }}
+            <a href="{{ route('customer.orders') }}" style="display:inline-block;font-weight:600;margin-top:.25rem;">View my bookings →</a>
+        </div>
+    </div>
+@endif
+
 <div class="row g-3">
     @forelse($packages as $package)
     <div class="col-12 col-lg-6">
@@ -77,6 +87,12 @@
                 @endif
 
                 <div class="menu-card-price">₱{{ number_format($package->price, 2) }}</div>
+                @if($pendingLimitError)
+                <button type="button" class="btn-cj-amber btn-cj" style="width:100%;justify-content:center;padding:.55rem;" disabled
+                        aria-describedby="pending-limit-note">
+                    Booking limit reached
+                </button>
+                @else
                 <button type="button" class="btn-cj-amber btn-cj" style="width:100%;justify-content:center;padding:.55rem;"
                         data-bs-toggle="modal" data-bs-target="#availModal"
                         data-package-id="{{ $package->id }}"
@@ -85,6 +101,7 @@
                         data-package-price="{{ number_format($package->price, 2) }}">
                     Avail This Package
                 </button>
+                @endif
             </div>
         </div>
     </div>
@@ -103,7 +120,7 @@
                 <h5 class="modal-title" id="avail-modal-title">{{ $erroredPackage->name ?? 'Book Package' }}</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <form method="POST" action="{{ route('customer.packages.avail') }}" id="avail-form">
+            <form method="POST" action="{{ route('customer.packages.avail') }}" id="avail-form" data-submit-once>
                 @csrf
                 <div class="modal-body">
                     <input type="hidden" name="package_id" id="avail-package-id"
@@ -243,7 +260,7 @@
                     <button type="button" class="btn-cj"
                             style="background:transparent;color:var(--green-dark);border-color:var(--green-dark);"
                             data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn-cj-amber btn-cj">Continue to Payment →</button>
+                    <button type="submit" class="btn-cj-amber btn-cj" data-loading-text="Checking date…">Continue to Payment →</button>
                 </div>
             </form>
         </div>

@@ -68,6 +68,14 @@ return [
     'timezone' => env('APP_TIMEZONE', 'UTC'),
 
     /*
+    | Local testing only: BUSINESS_HOURS_BYPASS=true lets menu ordering work
+    | outside 7:30 AM – 8:00 PM. App\Services\BusinessHours ignores it
+    | unless APP_ENV is exactly "local", so it can never open ordering on
+    | Railway (production) even if the variable is set there by mistake.
+    */
+    'business_hours_bypass' => (bool) env('BUSINESS_HOURS_BYPASS', false),
+
+    /*
     |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------

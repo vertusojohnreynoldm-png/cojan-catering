@@ -12,6 +12,8 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\ActivityLogger;
 use App\Services\BookingCapacity;
+use App\Services\OrderSubmissionGuard;
+use App\Services\SubmissionToken;
 use App\Services\BusinessHours;
 use App\Services\DeliverySlots;
 use App\Services\PackageStockService;
@@ -87,10 +89,15 @@ class OrderController extends Controller
         );
         $todayBlockedReason = $blockedDeliveryDates[now()->toDateString()] ?? null;
 
+        // Shown up front so the customer isn't surprised on submit; store()
+        // enforces it regardless.
+        $pendingLimitError = BookingCapacity::pendingLimitError(auth()->id(), false);
+        $submissionToken = SubmissionToken::issue('checkout');
+
         return view('customer.checkout', compact(
             'cart', 'total', 'gcashQr', 'minDeliveryDate', 'maxDeliveryDate',
             'hasMenuItems', 'sanJoseBarangays', 'cateringAreas',
-            'blockedDeliveryDates', 'todayBlockedReason'
+            'blockedDeliveryDates', 'todayBlockedReason', 'pendingLimitError', 'submissionToken'
         ));
     }
 
@@ -107,6 +114,12 @@ class OrderController extends Controller
 
     public function store(Request $request)
     {
+        // Duplicate submit, stale page, rate limit, pending limit — before
+        // anything else, so a double tap never even reaches validation.
+        if ($redirect = OrderSubmissionGuard::check($request, 'checkout', 'customer.checkout', false)) {
+            return $redirect;
+        }
+
         $request->validate([
             'province'         => ['required', 'string'],
             'municipality'     => ['required', 'string'],
@@ -241,6 +254,7 @@ class OrderController extends Controller
                 BookingCapacity::reserveMenuOrder(
                     $requestedDeliveryAt, auth()->id(), $request->boolean('confirm_duplicate_slot')
                 );
+                BookingCapacity::reservePendingSlot(auth()->id(), false);
 
                 // Aggregate utensil requirements across every package in the
                 // cart BEFORE creating anything, so a shortfall aborts the
@@ -281,6 +295,7 @@ class OrderController extends Controller
                     'delivery_type'    => $request->delivery_type,
                     'requested_delivery_at'  => $requestedDeliveryAt,
                     'delivery_window_label'  => $deliveryWindowLabel,
+                    'idempotency_key'  => $request->submission_token,
                 ]);
 
                 foreach ($cart as $item) {
@@ -307,21 +322,41 @@ class OrderController extends Controller
                 $order->update(['qr_code' => $qrCode]);
 
                 return $order;
-            });
-        } catch (DuplicateSlotOrderException $e) {
-            return back()->withInput()
-                ->withErrors([$e->field => $e->getMessage()])
-                ->with('needs_duplicate_slot_confirmation', true);
-        } catch (BookingUnavailableException $e) {
-            return back()->withInput()->withErrors([$e->field => $e->getMessage()]);
-        } catch (InsufficientStockException $e) {
-            return redirect()->route('customer.cart')->with('error', $e->getMessage());
+            }, attempts: 3); // retried on a MySQL deadlock — see BookingCapacity::lock()
         } catch (Throwable $e) {
+            // Whatever stopped this request, if a simultaneous duplicate of
+            // it (same token) already created the order, that's the answer —
+            // e.g. it lost the race on the unique idempotency_key, or waited
+            // on the slot lock and then found its own twin had taken the slot.
+            if ($existing = SubmissionToken::existingOrder($request->submission_token, auth()->id())) {
+                return redirect()->route('customer.orders.show', $existing->id)
+                    ->with('success', 'Your order was already placed — here it is.');
+            }
+
+            if ($e instanceof DuplicateSlotOrderException) {
+                return back()->withInput()
+                    ->withErrors([$e->field => $e->getMessage()])
+                    ->with('needs_duplicate_slot_confirmation', true);
+            }
+
+            if ($e instanceof BookingUnavailableException) {
+                return back()->withInput()->withErrors([$e->field => $e->getMessage()]);
+            }
+
+            if ($e instanceof InsufficientStockException) {
+                return redirect()->route('customer.cart')->with('error', $e->getMessage());
+            }
+
+            // Unexpected — the customer gets a generic message, so make sure
+            // the real cause lands in the log.
+            report($e);
+
             return redirect()->route('customer.cart')
                 ->with('error', 'We could not place your order. Please try again.');
         }
 
         session()->forget('cart');
+        SubmissionToken::forget('checkout', $request->submission_token);
 
         return redirect()->route('customer.orders.show', $order->id)
             ->with('success', 'Order placed successfully!');

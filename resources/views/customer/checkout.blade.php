@@ -38,6 +38,11 @@
 @section('content')
 <x-breadcrumbs :items="['Menu' => route('customer.menu'), 'Cart' => route('customer.cart'), 'Checkout' => null]" />
 <h1 class="cj-page-title">Checkout</h1>
+@if(\App\Services\BusinessHours::bypassActive())
+    <div class="alert-cj alert-info" role="note" style="font-size:var(--fs-xs);">
+        <i class="bi bi-wrench"></i> Local testing: business hours are bypassed (BUSINESS_HOURS_BYPASS). This never applies in production.
+    </div>
+@endif
 
 <div class="row g-3 mt-1">
     <!-- Order Summary -->
@@ -82,6 +87,16 @@
         <div class="cj-card">
             <div class="cj-card-header">Delivery Details</div>
             <div class="cj-card-body">
+                @if($pendingLimitError && !$errors->has('pending_limit'))
+                    <div class="alert-cj alert-warning mb-3" role="status" style="align-items:flex-start;">
+                        <i class="bi bi-hourglass-split" style="margin-top:2px;"></i>
+                        <div>
+                            {{ $pendingLimitError }}
+                            <a href="{{ route('customer.orders') }}" style="display:inline-block;font-weight:600;margin-top:.25rem;">View my orders →</a>
+                        </div>
+                    </div>
+                @endif
+
                 @if($errors->any())
                     <div class="alert-cj alert-danger mb-3">
                         <ul class="mb-0">
@@ -92,8 +107,9 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('customer.orders.store') }}" id="checkout-form">
+                <form method="POST" action="{{ route('customer.orders.store') }}" id="checkout-form" data-submit-once>
                     @csrf
+                    <input type="hidden" name="submission_token" value="{{ $submissionToken }}">
                     <div class="mb-3">
                         <label class="cj-label">Delivery Area <span style="color:var(--required);">*</span></label>
                         @if($hasMenuItems)
@@ -242,10 +258,17 @@
                         :total="$total + 50"
                         :gcash-qr="$gcashQr" />
 
-                    <button type="submit" class="btn-cj btn-cj w-100"
-                            style="width:100%;padding:.75rem;">
-                        Place Order →
-                    </button>
+                    @if($pendingLimitError)
+                        <button type="submit" class="btn-cj btn-cj w-100" disabled data-keep-disabled
+                                style="width:100%;padding:.75rem;">
+                            Order limit reached
+                        </button>
+                    @else
+                        <button type="submit" class="btn-cj btn-cj w-100" data-loading-text="Placing order…"
+                                style="width:100%;padding:.75rem;">
+                            Place Order →
+                        </button>
+                    @endif
                 </form>
             </div>
         </div>

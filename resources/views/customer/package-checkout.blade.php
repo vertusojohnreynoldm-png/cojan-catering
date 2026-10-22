@@ -53,6 +53,16 @@
         <div class="cj-card">
             <div class="cj-card-header">Payment</div>
             <div class="cj-card-body">
+                @if($pendingLimitError && !$errors->has('pending_limit'))
+                    <div class="alert-cj alert-warning mb-3" role="status" style="align-items:flex-start;">
+                        <i class="bi bi-hourglass-split" style="margin-top:2px;"></i>
+                        <div>
+                            {{ $pendingLimitError }}
+                            <a href="{{ route('customer.orders') }}" style="display:inline-block;font-weight:600;margin-top:.25rem;">View my bookings →</a>
+                        </div>
+                    </div>
+                @endif
+
                 @if($errors->any())
                     <div class="alert-cj alert-danger mb-3">
                         <ul class="mb-0">
@@ -63,18 +73,26 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('customer.packages.checkout.store') }}">
+                <form method="POST" action="{{ route('customer.packages.checkout.store') }}" data-submit-once>
                     @csrf
+                    <input type="hidden" name="submission_token" value="{{ $submissionToken }}">
                     @php $selectedPayment = old('payment_method', 'cash_on_delivery'); @endphp
                     <x-payment-method-selector
                         :selected-payment="$selectedPayment"
                         :total="$total"
                         :gcash-qr="$gcashQr" />
 
-                    <button type="submit" class="btn-cj btn-cj w-100"
-                            style="width:100%;padding:.75rem;">
-                        Confirm Booking →
-                    </button>
+                    @if($pendingLimitError)
+                        <button type="submit" class="btn-cj btn-cj w-100" disabled data-keep-disabled
+                                style="width:100%;padding:.75rem;">
+                            Booking limit reached
+                        </button>
+                    @else
+                        <button type="submit" class="btn-cj btn-cj w-100" data-loading-text="Confirming booking…"
+                                style="width:100%;padding:.75rem;">
+                            Confirm Booking →
+                        </button>
+                    @endif
                 </form>
             </div>
         </div>

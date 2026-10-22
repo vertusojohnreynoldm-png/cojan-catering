@@ -12,6 +12,8 @@ use App\Rules\PhilippineMobileNumber;
 use App\Rules\ValidPersonName;
 use App\Services\BookingCapacity;
 use App\Services\BookingSettings;
+use App\Services\OrderSubmissionGuard;
+use App\Services\SubmissionToken;
 use App\Services\PackageStockService;
 use App\Services\ServiceArea;
 use Illuminate\Http\Request;
@@ -46,7 +48,9 @@ class PackageController extends Controller
             'leadDays'    => BookingSettings::get('catering_min_lead_days'),
         ];
 
-        return view('customer.packages', compact('packages', 'cateringAreas', 'eventCalendar'));
+        $pendingLimitError = BookingCapacity::pendingLimitError(auth()->id(), true);
+
+        return view('customer.packages', compact('packages', 'cateringAreas', 'eventCalendar', 'pendingLimitError'));
     }
 
     // Step 1 of the Avail flow: the modal's booking details, staged in the
@@ -55,6 +59,12 @@ class PackageController extends Controller
     public function storeBooking(Request $request)
     {
         CateringPackage::where('is_available', true)->findOrFail($request->package_id);
+
+        // Early, friendly stop — no point filling in event details for a
+        // booking the final step would refuse anyway.
+        if ($pendingError = BookingCapacity::pendingLimitError(auth()->id(), true)) {
+            return redirect()->route('customer.packages.index')->with('error', $pendingError);
+        }
 
         // The modal sends the calendar date and the time dropdown separately
         // (so the calendar can be a date-only picker); everything downstream
@@ -146,7 +156,12 @@ class PackageController extends Controller
             // falls back to a plain-text readout.
         }
 
-        return view('customer.package-checkout', compact('package', 'booking', 'total', 'gcashQr'));
+        $pendingLimitError = BookingCapacity::pendingLimitError(auth()->id(), true);
+        $submissionToken = SubmissionToken::issue('package_checkout');
+
+        return view('customer.package-checkout', compact(
+            'package', 'booking', 'total', 'gcashQr', 'pendingLimitError', 'submissionToken'
+        ));
     }
 
     // Step 3: confirm — creates the Order/OrderItem via the same stock-lock
@@ -154,6 +169,12 @@ class PackageController extends Controller
     // a single package rather than a whole cart.
     public function store(Request $request)
     {
+        // Duplicate submit, stale page, rate limit, pending limit — first,
+        // so a double tap on "Confirm Booking" never books twice.
+        if ($redirect = OrderSubmissionGuard::check($request, 'package_checkout', 'customer.packages.checkout', true)) {
+            return $redirect;
+        }
+
         $booking = session()->get('package_booking');
 
         if (!$booking) {
@@ -181,6 +202,7 @@ class PackageController extends Controller
                 // held until commit — two customers racing for the last
                 // booking on a date can't both get it.
                 BookingCapacity::reserveCatering(Carbon::parse($booking['event_date']), auth()->id());
+                BookingCapacity::reservePendingSlot(auth()->id(), true);
 
                 PackageStockService::lockAndDecrement([[$package, 1]]);
 
@@ -204,6 +226,7 @@ class PackageController extends Controller
                     'contact_name'     => $booking['contact_name'],
                     'event_date'       => $booking['event_date'],
                     'event_type'       => $booking['event_type'] ?? null,
+                    'idempotency_key'  => $request->submission_token,
                 ]);
 
                 OrderItem::create([
@@ -225,17 +248,36 @@ class PackageController extends Controller
                 $order->update(['qr_code' => $qrCode]);
 
                 return $order;
-            });
-        } catch (BookingUnavailableException $e) {
-            return redirect()->route('customer.packages.index')->with('error', $e->getMessage());
-        } catch (InsufficientStockException $e) {
-            return redirect()->route('customer.packages.checkout')->with('error', $e->getMessage());
+            }, attempts: 3); // retried on a MySQL deadlock — see BookingCapacity::lock()
         } catch (Throwable $e) {
+            // If a simultaneous duplicate of this request (same token) already
+            // booked it, show that booking — whether this one lost on the
+            // unique idempotency_key or on the date/pending-limit re-check.
+            if ($existing = SubmissionToken::existingOrder($request->submission_token, auth()->id())) {
+                return redirect()->route('customer.orders.show', $existing->id)
+                    ->with('success', 'Your booking was already placed — here it is.');
+            }
+
+            if ($e instanceof BookingUnavailableException) {
+                return $e->field === 'pending_limit'
+                    ? back()->withErrors(['pending_limit' => $e->getMessage()])
+                    : redirect()->route('customer.packages.index')->with('error', $e->getMessage());
+            }
+
+            if ($e instanceof InsufficientStockException) {
+                return redirect()->route('customer.packages.checkout')->with('error', $e->getMessage());
+            }
+
+            // Unexpected — the customer gets a generic message, so make sure
+            // the real cause lands in the log.
+            report($e);
+
             return redirect()->route('customer.packages.checkout')
                 ->with('error', 'We could not complete your booking. Please try again.');
         }
 
         session()->forget('package_booking');
+        SubmissionToken::forget('package_checkout', $request->submission_token);
 
         return redirect()->route('customer.orders.show', $order->id)
             ->with('success', 'Package booked successfully!');

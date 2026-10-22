@@ -37,6 +37,7 @@ class Order extends Model
         'delivery_type',
         'requested_delivery_at',
         'delivery_window_label',
+        'idempotency_key',
     ];
 
     protected $casts = [

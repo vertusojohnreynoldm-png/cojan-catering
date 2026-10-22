@@ -212,6 +212,49 @@ class BookingCapacity
         }
     }
 
+    // ---- Pending-order limit (per customer) -----------------------------
+
+    /**
+     * Customer-facing message if this customer already has the maximum
+     * number of still-'pending' bookings (or menu orders), else null.
+     * A mixed cart order counts as a menu order — it isn't a booking.
+     */
+    public static function pendingLimitError(int $userId, bool $isBooking): ?string
+    {
+        $query = $isBooking ? Order::bookings() : Order::regularOrders();
+        $pending = $query->where('user_id', $userId)->where('status', 'pending')->orderBy('created_at')->get();
+
+        $max = BookingSettings::get($isBooking ? 'max_pending_catering_bookings' : 'max_pending_menu_orders');
+
+        if ($pending->count() < $max) {
+            return null;
+        }
+
+        // At most three numbers, so the message stays short on a phone.
+        $numbers = $pending->take(3)->map(fn ($o) => '#' . $o->order_number)->implode(', ')
+            . ($pending->count() > 3 ? ' and ' . ($pending->count() - 3) . ' more' : '');
+
+        return $isBooking
+            ? "You already have {$pending->count()} catering " . str('booking')->plural($pending->count())
+                . " waiting for confirmation ({$numbers}). You can book another package once one of them is confirmed or cancelled."
+            : "You already have {$pending->count()} " . str('order')->plural($pending->count())
+                . " waiting for confirmation ({$numbers}). You can place another order once one of them is confirmed or cancelled.";
+    }
+
+    /**
+     * The authoritative pending-limit check, under a per-customer lock so
+     * two simultaneous submissions from one account can't both slip under
+     * the limit. Call inside the order transaction.
+     */
+    public static function reservePendingSlot(int $userId, bool $isBooking): void
+    {
+        self::lock('user:' . $userId);
+
+        if ($error = self::pendingLimitError($userId, $isBooking)) {
+            throw new BookingUnavailableException($error, 'pending_limit');
+        }
+    }
+
     // ---- Blocked dates ---------------------------------------------------
 
     /** The admin's reason (or a generic label) if this day is blocked, else null. */
@@ -239,13 +282,24 @@ class BookingCapacity
     // ---- Locking ---------------------------------------------------------
 
     /**
-     * Creates the bucket's lock row if this is the first booking for it,
-     * then holds a FOR UPDATE lock on it until the surrounding transaction
-     * ends. (On SQLite — the test database — FOR UPDATE is a no-op, but
-     * SQLite only ever allows one writer at a time anyway.)
+     * Holds a FOR UPDATE lock on the bucket's row until the surrounding
+     * transaction ends, creating the row first if this is the bucket's
+     * first ever booking. (On SQLite — the test database — FOR UPDATE is a
+     * no-op, but SQLite only ever allows one writer at a time anyway.)
+     *
+     * SELECT ... FOR UPDATE comes first on purpose: INSERT IGNORE on a row
+     * that already exists takes a *shared* lock in MySQL, and two requests
+     * both holding a shared lock and then both asking for FOR UPDATE is a
+     * deadlock. Only a bucket's very first booking can still deadlock (two
+     * inserts racing on a missing row) — the order transactions are run
+     * with deadlock retries (DB::transaction(..., 3)) to absorb that.
      */
     public static function lock(string $key): void
     {
+        if (DB::table('booking_locks')->where('key', $key)->lockForUpdate()->exists()) {
+            return;
+        }
+
         DB::table('booking_locks')->insertOrIgnore([
             'key' => $key, 'created_at' => now(), 'updated_at' => now(),
         ]);

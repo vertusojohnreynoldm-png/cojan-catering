@@ -22,6 +22,10 @@ class BusinessHours
      */
     public static function isMenuOrderingOpen(): bool
     {
+        if (self::bypassActive()) {
+            return true;
+        }
+
         $now = Carbon::now();
         $open = $now->copy()->setTimeFromTimeString(self::OPEN_TIME);
         $close = $now->copy()->setTimeFromTimeString(self::CLOSE_TIME);
@@ -35,7 +39,7 @@ class BusinessHours
      */
     public static function minutesUntilClose(): ?int
     {
-        if (!self::isMenuOrderingOpen()) {
+        if (self::bypassActive() || !self::isMenuOrderingOpen()) {
             return null;
         }
 
@@ -43,6 +47,18 @@ class BusinessHours
         $close = $now->copy()->setTimeFromTimeString(self::CLOSE_TIME);
 
         return (int) $now->diffInMinutes($close, false);
+    }
+
+    /**
+     * Local-testing escape hatch (BUSINESS_HOURS_BYPASS in .env, read via
+     * config('app.business_hours_bypass')). Only honoured when APP_ENV is
+     * "local" — ignored in production and in the test suite ("testing").
+     * Only the ordering gate is bypassed; delivery time-frame slots still
+     * follow the real hours (DeliverySlots).
+     */
+    public static function bypassActive(): bool
+    {
+        return config('app.business_hours_bypass') === true && app()->environment('local');
     }
 
     public static function hoursLabel(): string
