@@ -9,6 +9,10 @@ use Carbon\Carbon;
  * later" regular menu orders. Catering package bookings have their own
  * event_date flow (Customer\PackageController) and never touch this.
  *
+ * Capacity (max orders per time frame) and admin-blocked dates are layered
+ * on top by availabilityFor() / BookingCapacity — not baked into
+ * slotsFor().
+ *
  * This is the single source of truth for slot generation — the checkout
  * page's slot chips are populated from this class via an AJAX endpoint
  * (Customer\OrderController::deliverySlots()), and the order submission is
@@ -69,6 +73,40 @@ class DeliverySlots
         }
 
         return $slots;
+    }
+
+    /**
+     * What the checkout's slot chips render: every time-valid slot for the
+     * date, each flagged 'full' once it hits the admin's per-time-frame cap,
+     * plus the admin's reason if the whole day is blocked. Capacity and
+     * blocked dates are layered on here (not in slotsFor()) so isValidSlot()
+     * stays a pure time check and the authoritative capacity re-check lives
+     * in one place — BookingCapacity::reserveMenuOrder().
+     *
+     * @return array{slots: array<int, array{value: string, label: string, full: bool}>, blocked: ?string}
+     */
+    public static function availabilityFor(string $date): array
+    {
+        $slots = self::slotsFor($date);
+
+        if (empty($slots)) {
+            return ['slots' => [], 'blocked' => null];
+        }
+
+        $day = Carbon::parse($date)->startOfDay();
+
+        if ($reason = BookingCapacity::blockedReason($day)) {
+            return ['slots' => [], 'blocked' => $reason];
+        }
+
+        $counts = BookingCapacity::slotCountsOn($day);
+        $max = BookingSettings::get('max_orders_per_time_frame');
+
+        foreach ($slots as &$slot) {
+            $slot['full'] = ($counts[$slot['value']] ?? 0) >= $max;
+        }
+
+        return ['slots' => $slots, 'blocked' => null];
     }
 
     public static function isValidSlot(string $date, string $slotValue): bool

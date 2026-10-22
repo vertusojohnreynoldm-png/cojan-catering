@@ -51,29 +51,15 @@ class CartController extends Controller
         return redirect()->route('customer.cart')->with('success', $menuItem->name . ' added to cart!');
     }
 
+    // Disabled: a package added through the cart had no event date, so it
+    // bypassed every per-date capacity, lead-time and blocked-date check.
+    // Every package now goes through the Avail flow (Customer\
+    // PackageController). The route is kept, not deleted, so an old bookmark
+    // or cached form lands somewhere helpful instead of a 404/405.
     public function addPackage(Request $request)
     {
-        $package = CateringPackage::where('is_available', true)->findOrFail($request->package_id);
-        $cart = session()->get('cart', []);
-
-        $key = 'package_' . $package->id;
-
-        if (isset($cart[$key])) {
-            $cart[$key]['quantity'] += $request->quantity ?? 1;
-        } else {
-            $cart[$key] = [
-                'type'     => 'package',
-                'id'       => $package->id,
-                'name'     => $package->name,
-                'price'    => $package->price,
-                'pax'      => $package->pax,
-                'quantity' => $request->quantity ?? 1,
-            ];
-        }
-
-        session()->put('cart', $cart);
-
-        return redirect()->route('customer.cart')->with('success', $package->name . ' added to cart!');
+        return redirect()->route('customer.packages.index')
+            ->with('error', 'Catering packages are booked with an event date — tap "Avail" on the package you want.');
     }
 
     public function update(Request $request, $id)

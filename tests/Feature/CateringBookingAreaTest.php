@@ -38,7 +38,8 @@ class CateringBookingAreaTest extends TestCase
             'municipality' => 'Calapan City',
             'barangay' => 'Balingayan',
             'street' => '123 Test St',
-            'event_date' => now()->addDays(2)->format('Y-m-d H:i:s'),
+            // Past the default 3-day catering lead time (BookingSettings).
+            'event_date' => now()->addDays(5)->format('Y-m-d H:i:s'),
         ], $overrides);
     }
 

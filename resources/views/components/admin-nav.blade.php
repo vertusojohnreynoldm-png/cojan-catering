@@ -1,9 +1,9 @@
-{{-- Admin top nav — 9 links + Logout don't fit a single row below 992px
+{{-- Admin top nav — 11 links + Logout don't fit a single row below 1280px
      (wider cutoff than the customer/delivery 768px since there's more than
      twice as many links here), so under that width this collapses into a
      hamburger + slide-down panel instead of customer's full-screen overlay
      pattern: a short list of 9 rows reads better as a dropdown than centered
-     full-screen pills. Desktop (≥992px) is untouched — same flex row as
+     full-screen pills. Desktop (≥1280px) is untouched — same flex row as
      before, styled entirely by cojan.css's existing .cj-nav/.cj-nav-links. --}}
 <style>
     .cj-admin-hamburger {
@@ -32,7 +32,17 @@
     .cj-admin-hamburger.open span:nth-child(2) { opacity: 0; }
     .cj-admin-hamburger.open span:nth-child(3) { transform: translateY(-7px) rotate(-45deg); }
 
-    @media (max-width: 992px) {
+    /* 11 links + Logout on one desktop row: keep the brand on one line and
+       tighten the buttons slightly until there's room to spare (≥1440px). */
+    @media (min-width: 1280px) {
+        .cj-nav-brand { white-space: nowrap; flex-shrink: 0; }
+    }
+    @media (min-width: 1280px) and (max-width: 1440px) {
+        .cj-admin-nav-links { gap: .3rem; }
+        .cj-admin-nav-links .btn-cj-sm { padding-left: .5rem; padding-right: .5rem; font-size: .76rem; }
+    }
+
+    @media (max-width: 1279px) {
         .cj-nav { flex-wrap: nowrap; }
         .cj-nav-brand { font-size: clamp(.95rem, 4vw, 1.2rem); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         .cj-admin-hamburger { display: flex; }
@@ -107,6 +117,10 @@
         <a href="{{ route('admin.bookings') }}" onclick="toggleAdminNav()"
            class="btn-cj-outline btn-cj btn-cj-sm {{ request()->routeIs('admin.bookings*') ? 'cj-admin-nav-active' : '' }}">
             📦 Bookings
+        </a>
+        <a href="{{ route('admin.booking-rules') }}" onclick="toggleAdminNav()"
+           class="btn-cj-outline btn-cj btn-cj-sm {{ request()->routeIs('admin.booking-rules*', 'admin.blocked-dates*') ? 'cj-admin-nav-active' : '' }}">
+            <i class="bi bi-calendar2-check"></i> Booking Rules
         </a>
         <a href="{{ route('admin.menu') }}" onclick="toggleAdminNav()"
            class="btn-cj-outline btn-cj btn-cj-sm {{ request()->routeIs('admin.menu*') ? 'cj-admin-nav-active' : '' }}">

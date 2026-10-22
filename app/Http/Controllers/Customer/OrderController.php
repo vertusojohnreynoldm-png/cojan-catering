@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Customer;
 
+use App\Exceptions\BookingUnavailableException;
+use App\Exceptions\DuplicateSlotOrderException;
 use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
 use App\Models\CateringPackage;
@@ -9,6 +11,7 @@ use App\Models\MenuItem;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\ActivityLogger;
+use App\Services\BookingCapacity;
 use App\Services\BusinessHours;
 use App\Services\DeliverySlots;
 use App\Services\PackageStockService;
@@ -76,9 +79,18 @@ class OrderController extends Controller
         $sanJoseBarangays = ServiceArea::menuBarangays();
         $cateringAreas = $hasMenuItems ? [] : ServiceArea::cateringPsgcForDropdowns();
 
+        // Admin-blocked days inside the 3-day scheduling window — listed
+        // under the date input, since a native date picker can't grey them
+        // out. If today itself is blocked, ASAP is disabled in the view.
+        $blockedDeliveryDates = BookingCapacity::blockedDatesBetween(
+            DeliverySlots::earliestSelectableDate(), DeliverySlots::latestSelectableDate()
+        );
+        $todayBlockedReason = $blockedDeliveryDates[now()->toDateString()] ?? null;
+
         return view('customer.checkout', compact(
             'cart', 'total', 'gcashQr', 'minDeliveryDate', 'maxDeliveryDate',
-            'hasMenuItems', 'sanJoseBarangays', 'cateringAreas'
+            'hasMenuItems', 'sanJoseBarangays', 'cateringAreas',
+            'blockedDeliveryDates', 'todayBlockedReason'
         ));
     }
 
@@ -90,7 +102,7 @@ class OrderController extends Controller
     {
         $request->validate(['date' => 'required|date_format:Y-m-d']);
 
-        return response()->json(['slots' => DeliverySlots::slotsFor($request->date)]);
+        return response()->json(DeliverySlots::availabilityFor($request->date));
     }
 
     public function store(Request $request)
@@ -108,6 +120,7 @@ class OrderController extends Controller
             'delivery_type'    => 'required|in:asap,scheduled',
             'delivery_date'    => 'required_if:delivery_type,scheduled|nullable|date_format:Y-m-d',
             'delivery_slot'    => 'required_if:delivery_type,scheduled|nullable|string',
+            'confirm_duplicate_slot' => 'nullable|boolean',
         ], [
             'street.min' => 'Please enter a more complete street/purok/house number.',
         ]);
@@ -221,6 +234,14 @@ class OrderController extends Controller
             $order = DB::transaction(function () use (
                 $request, $cart, $subtotal, $deliveryFee, $total, $requestedDeliveryAt, $deliveryWindowLabel
             ) {
+                // First, so a blocked day / full time frame aborts before any
+                // stock is touched — and the slot's row lock is held until
+                // this order commits, so a concurrent checkout can't also
+                // take the last place in it.
+                BookingCapacity::reserveMenuOrder(
+                    $requestedDeliveryAt, auth()->id(), $request->boolean('confirm_duplicate_slot')
+                );
+
                 // Aggregate utensil requirements across every package in the
                 // cart BEFORE creating anything, so a shortfall aborts the
                 // whole order cleanly instead of leaving a partial commit.
@@ -287,6 +308,12 @@ class OrderController extends Controller
 
                 return $order;
             });
+        } catch (DuplicateSlotOrderException $e) {
+            return back()->withInput()
+                ->withErrors([$e->field => $e->getMessage()])
+                ->with('needs_duplicate_slot_confirmation', true);
+        } catch (BookingUnavailableException $e) {
+            return back()->withInput()->withErrors([$e->field => $e->getMessage()]);
         } catch (InsufficientStockException $e) {
             return redirect()->route('customer.cart')->with('error', $e->getMessage());
         } catch (Throwable $e) {

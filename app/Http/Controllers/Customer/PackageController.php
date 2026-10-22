@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Customer;
 
+use App\Exceptions\BookingUnavailableException;
 use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
 use App\Models\CateringPackage;
@@ -9,9 +10,12 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Rules\PhilippineMobileNumber;
 use App\Rules\ValidPersonName;
+use App\Services\BookingCapacity;
+use App\Services\BookingSettings;
 use App\Services\PackageStockService;
 use App\Services\ServiceArea;
 use Illuminate\Http\Request;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
@@ -32,7 +36,17 @@ class PackageController extends Controller
 
         $cateringAreas = ServiceArea::cateringPsgcForDropdowns();
 
-        return view('customer.packages', compact('packages', 'cateringAreas'));
+        // Feeds the Avail modal's calendar: the bookable window plus every
+        // full/blocked date inside it, which the calendar greys out. Only a
+        // hint — storeBooking() and store() re-check all of it server-side.
+        $eventCalendar = [
+            'minDate'     => BookingCapacity::earliestCateringDate()->toDateString(),
+            'maxDate'     => BookingCapacity::latestCateringDate()->toDateString(),
+            'unavailable' => BookingCapacity::unavailableCateringDates(),
+            'leadDays'    => BookingSettings::get('catering_min_lead_days'),
+        ];
+
+        return view('customer.packages', compact('packages', 'cateringAreas', 'eventCalendar'));
     }
 
     // Step 1 of the Avail flow: the modal's booking details, staged in the
@@ -42,7 +56,12 @@ class PackageController extends Controller
     {
         CateringPackage::where('is_available', true)->findOrFail($request->package_id);
 
-        $minEventDate = now()->addHours(24);
+        // The modal sends the calendar date and the time dropdown separately
+        // (so the calendar can be a date-only picker); everything downstream
+        // still works with the single combined event_date it always has.
+        if ($request->filled('event_day') && $request->filled('event_time')) {
+            $request->merge(['event_date' => $request->event_day . ' ' . $request->event_time]);
+        }
 
         $validated = $request->validate([
             'package_id'     => 'required|exists:catering_packages,id',
@@ -53,12 +72,21 @@ class PackageController extends Controller
             'barangay'       => ['required', 'string'],
             'street'         => ['required', 'string', 'min:5'],
             'landmark'       => ['nullable', 'string', 'max:255'],
-            'event_date'     => ['required', 'date', 'after_or_equal:' . $minEventDate->toDateTimeString()],
+            'event_date'     => ['required', 'date', 'after:now'],
             'event_type'     => 'nullable|string|max:100',
         ], [
-            'event_date.after_or_equal' => 'Event date/time must be at least 24 hours from now, to allow prep time.',
+            'event_date.required' => 'Please choose an event date and time.',
+            'event_date.after' => 'Please choose an event date and time in the future.',
             'street.min' => 'Please enter a more complete street/purok/house number.',
         ]);
+
+        // Lead time, max advance, blocked dates, date capacity and "you
+        // already have a booking that day" — checked early here for a
+        // friendly error, and again under a row lock in store().
+        $dateError = BookingCapacity::cateringDateError(Carbon::parse($validated['event_date']), auth()->id());
+        if ($dateError) {
+            return back()->withInput()->withErrors(['event_date' => $dateError]);
+        }
 
         $areaError = ServiceArea::cateringDeliveryError($validated['province'], $validated['municipality'], $validated['barangay']);
         if ($areaError) {
@@ -99,6 +127,12 @@ class PackageController extends Controller
 
             return redirect()->route('customer.packages.index')
                 ->with('error', 'This package is no longer available.');
+        }
+
+        // The date may have filled up or been blocked since step 1.
+        $dateError = BookingCapacity::cateringDateError(Carbon::parse($booking['event_date']), auth()->id());
+        if ($dateError) {
+            return redirect()->route('customer.packages.index')->with('error', $dateError);
         }
 
         $total = $package->price; // no delivery fee for package bookings
@@ -143,6 +177,11 @@ class PackageController extends Controller
 
         try {
             $order = DB::transaction(function () use ($request, $package, $booking) {
+                // Authoritative date check, with this event date's row lock
+                // held until commit — two customers racing for the last
+                // booking on a date can't both get it.
+                BookingCapacity::reserveCatering(Carbon::parse($booking['event_date']), auth()->id());
+
                 PackageStockService::lockAndDecrement([[$package, 1]]);
 
                 $order = Order::create([
@@ -187,6 +226,8 @@ class PackageController extends Controller
 
                 return $order;
             });
+        } catch (BookingUnavailableException $e) {
+            return redirect()->route('customer.packages.index')->with('error', $e->getMessage());
         } catch (InsufficientStockException $e) {
             return redirect()->route('customer.packages.checkout')->with('error', $e->getMessage());
         } catch (Throwable $e) {

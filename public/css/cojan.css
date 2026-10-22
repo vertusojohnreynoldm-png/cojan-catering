@@ -852,3 +852,149 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
     width: 100% !important;
   }
 }
+
+/* ── BOOKING RULES (admin) ──
+   Pill tabs for the Limits / Blocked Dates sections, a label-left /
+   input-right row that stacks on phones, and a stacked blocked-date list
+   (not a table, so nothing needs to scroll sideways at 360px). */
+.cj-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-bottom: var(--space-4);
+}
+.cj-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+  padding: .45rem 1.1rem;
+  border-radius: 100px;
+  border: 1.5px solid rgba(122,46,29,.2);
+  background: var(--white);
+  color: var(--green-dark);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  text-decoration: none;
+  transition: var(--transition);
+}
+.cj-tab:hover { background: var(--amber-light); border-color: var(--amber); color: var(--green-dark); }
+.cj-tab.active { background: var(--green-dark); border-color: var(--green-dark); color: var(--white); }
+.cj-tab:focus-visible { outline: 2px solid var(--green-dark); outline-offset: 2px; }
+
+.cj-rule-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid rgba(122,46,29,.08);
+}
+.cj-rule-row:last-of-type { border-bottom: none; }
+.cj-rule-text { flex: 1 1 auto; min-width: 0; }
+.cj-rule-help { font-size: var(--fs-xs); color: var(--text-light); margin: 0; }
+.cj-rule-input { flex: 0 0 140px; }
+
+.cj-blocked-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid rgba(122,46,29,.08);
+}
+.cj-blocked-item:last-child { border-bottom: none; }
+.cj-blocked-date {
+  flex: 0 0 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  border-radius: var(--radius-sm);
+  background: var(--green-light);
+  color: var(--green-dark);
+  padding: .3rem 0;
+  line-height: 1.1;
+}
+.cj-blocked-month { font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .05em; }
+.cj-blocked-day { font-size: var(--fs-lg); font-weight: 700; }
+.cj-blocked-info { flex: 1 1 auto; min-width: 0; }
+
+@media (max-width: 768px) {
+  .cj-tab { min-height: 44px; }
+  .cj-rule-row { flex-direction: column; gap: var(--space-2); }
+  .cj-rule-input { flex-basis: auto; width: 100%; }
+}
+@media (max-width: 420px) {
+  .cj-blocked-item { flex-wrap: wrap; }
+  .cj-blocked-item form { flex: 1 1 100%; }
+  .cj-blocked-item form .btn-cj { width: 100%; }
+}
+
+/* ── EVENT DATE CALENDAR (customer Avail modal) ──
+   Theme for the flatpickr calendar: unavailable (full / blocked) days are
+   struck through and greyed so they read as "can't pick" even without
+   colour, and the calendar stretches to the modal width on phones. */
+.cj-event-calendar .flatpickr-calendar.inline {
+  width: 100%;
+  max-width: 340px;
+  margin: 0 auto;
+  box-shadow: none;
+  border: 1.5px solid rgba(122,46,29,.15);
+  border-radius: var(--radius-base);
+}
+.cj-event-calendar .flatpickr-days,
+.cj-event-calendar .dayContainer { width: 100%; min-width: 0; max-width: none; }
+.cj-event-calendar .flatpickr-day { max-width: none; height: 44px; line-height: 44px; }
+/* 44px tap targets for the month arrows too (flatpickr's default is ~34px). */
+.cj-event-calendar .flatpickr-months { align-items: center; }
+.cj-event-calendar .flatpickr-months .flatpickr-prev-month,
+.cj-event-calendar .flatpickr-months .flatpickr-next-month {
+  width: 44px;
+  height: 44px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cj-event-calendar .flatpickr-months .flatpickr-month { height: 44px; }
+.cj-event-calendar .flatpickr-current-month { padding-top: 10px; }
+.cj-event-calendar .flatpickr-day.selected,
+.cj-event-calendar .flatpickr-day.selected:hover {
+  background: var(--green-dark);
+  border-color: var(--green-dark);
+  color: var(--white);
+}
+.cj-event-calendar .flatpickr-day.today { border-color: var(--amber); }
+.cj-event-calendar .flatpickr-day.flatpickr-disabled.cj-day-full,
+.cj-event-calendar .flatpickr-day.flatpickr-disabled.cj-day-blocked {
+  background: repeating-linear-gradient(135deg, #f1f1f1, #f1f1f1 4px, #e6e6e6 4px, #e6e6e6 8px);
+  color: #9a9a9a;
+  text-decoration: line-through;
+}
+.cj-event-calendar .flatpickr-day.flatpickr-disabled.cj-day-blocked { color: var(--danger); opacity: .55; }
+.cj-calendar-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-4);
+  font-size: var(--fs-xs);
+  color: var(--text-light);
+  margin-top: var(--space-2);
+}
+.cj-calendar-legend span::before {
+  content: '';
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  margin-right: .35rem;
+  vertical-align: -1px;
+}
+.cj-legend-full::before { background: repeating-linear-gradient(135deg, #f1f1f1, #f1f1f1 3px, #ddd 3px, #ddd 6px); border: 1px solid #ccc; }
+.cj-legend-blocked::before { background: #fde2e2; border: 1px solid var(--danger); }
+.cj-legend-selected::before { background: var(--green-dark); }
+.cj-unavailable-list {
+  list-style: none;
+  padding: 0;
+  margin: var(--space-2) 0 0;
+  font-size: var(--fs-xs);
+  color: var(--text-mid);
+}
+.cj-unavailable-list li { padding: 2px 0; }

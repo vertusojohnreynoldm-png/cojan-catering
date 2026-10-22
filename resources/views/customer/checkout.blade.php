@@ -20,6 +20,18 @@
     }
     .slot-chip.active { background: var(--green-dark); color: #fff; border-color: var(--green-dark); }
     .slot-chip:focus-visible { outline: 2px solid var(--green-dark); outline-offset: 2px; }
+    .slot-chip:disabled {
+        background: #f1f1f1; color: #6b6b6b; border-color: #e0e0e0; border-style: dashed; cursor: not-allowed;
+    }
+    .slot-chip .slot-full-tag { text-decoration: none; display: inline-block; margin-left: .35rem; font-size: var(--fs-xs); font-weight: 600; }
+    .delivery-type-card.disabled { opacity: .55; cursor: not-allowed; background: #f6f6f6; }
+
+    .cj-confirm-duplicate {
+        display: flex; align-items: flex-start; gap: .6rem; margin-top: .75rem;
+        padding: .75rem; border: 1.5px solid var(--amber); border-radius: var(--radius-base);
+        background: var(--amber-light); font-size: .85rem; cursor: pointer; min-height: 44px;
+    }
+    .cj-confirm-duplicate input { width: 20px; height: 20px; flex: 0 0 20px; margin-top: 1px; accent-color: var(--green-dark); }
 </style>
 @endsection
 
@@ -153,17 +165,25 @@
                         <textarea name="notes" rows="2" placeholder="Special instructions..." class="cj-textarea"></textarea>
                     </div>
 
-                    @php $selectedDeliveryType = old('delivery_type', 'asap'); @endphp
+                    @php
+                        // Today blocked by the admin → ASAP isn't possible at
+                        // all (server rejects it too), so default to scheduling.
+                        $selectedDeliveryType = $todayBlockedReason ? 'scheduled' : old('delivery_type', 'asap');
+                    @endphp
                     <div class="mb-3">
                         <label class="cj-label">Delivery Time <span style="color:var(--required);">*</span></label>
                         <div class="row g-2">
                             <div class="col-6">
-                                <label for="dt-asap" class="delivery-type-card {{ $selectedDeliveryType === 'asap' ? 'active' : '' }}">
+                                <label for="dt-asap" class="delivery-type-card {{ $selectedDeliveryType === 'asap' ? 'active' : '' }} {{ $todayBlockedReason ? 'disabled' : '' }}">
                                     <input type="radio" id="dt-asap" name="delivery_type" value="asap"
                                            class="visually-hidden delivery-type-input"
-                                           {{ $selectedDeliveryType === 'asap' ? 'checked' : '' }}>
+                                           {{ $selectedDeliveryType === 'asap' ? 'checked' : '' }}
+                                           {{ $todayBlockedReason ? 'disabled' : '' }}>
                                     <div style="font-size:1.3rem;">⚡</div>
                                     <div style="font-size:.85rem;font-weight:600;">As Soon As Possible</div>
+                                    @if($todayBlockedReason)
+                                        <div style="font-size:var(--fs-xs);color:var(--danger);">Unavailable today</div>
+                                    @endif
                                 </label>
                             </div>
                             <div class="col-6">
@@ -176,6 +196,12 @@
                                 </label>
                             </div>
                         </div>
+                        @if($todayBlockedReason)
+                            <p style="font-size:.8rem;color:var(--text-mid);margin:.5rem 0 0;">
+                                <i class="bi bi-info-circle"></i>
+                                We're not taking same-day orders today ({{ $todayBlockedReason }}). You can still schedule a delivery for another day.
+                            </p>
+                        @endif
                     </div>
 
                     <div id="schedule-panel" style="{{ $selectedDeliveryType === 'scheduled' ? '' : 'display:none;' }} margin-bottom:1rem;">
@@ -184,6 +210,14 @@
                             <input type="date" name="delivery_date" id="delivery-date" class="cj-input"
                                    min="{{ $minDeliveryDate }}" max="{{ $maxDeliveryDate }}"
                                    value="{{ old('delivery_date', $minDeliveryDate) }}">
+                            @if(!empty($blockedDeliveryDates))
+                                <ul class="cj-unavailable-list">
+                                    <li style="font-weight:600;">Closed dates:</li>
+                                    @foreach($blockedDeliveryDates as $blockedDay => $blockedReason)
+                                        <li>{{ \Illuminate\Support\Carbon::parse($blockedDay)->format('D, M d') }} — {{ $blockedReason }}</li>
+                                    @endforeach
+                                </ul>
+                            @endif
                         </div>
                         <div class="mb-1">
                             <label class="cj-label">Delivery Window</label>
@@ -193,6 +227,13 @@
                                 No delivery windows available for this date — try another date.
                             </p>
                         </div>
+                        @if(session('needs_duplicate_slot_confirmation') || old('confirm_duplicate_slot'))
+                            <label class="cj-confirm-duplicate" for="confirm-duplicate-slot">
+                                <input type="checkbox" name="confirm_duplicate_slot" id="confirm-duplicate-slot" value="1"
+                                       {{ old('confirm_duplicate_slot') ? 'checked' : '' }}>
+                                <span>Yes, I want a <strong>second order</strong> in this same delivery time frame.</span>
+                            </label>
+                        @endif
                     </div>
 
                     @php $selectedPayment = old('payment_method', 'cash_on_delivery'); @endphp
@@ -241,7 +282,7 @@
 
         fetch(`{{ route('customer.checkout.delivery-slots') }}?date=${encodeURIComponent(dateInput.value)}`)
             .then(r => r.json())
-            .then(data => renderSlots(data.slots || []))
+            .then(data => renderSlots(data.slots || [], data.blocked || null))
             .catch(() => {
                 chipsContainer.innerHTML = '';
                 emptyMsg.textContent = 'Could not load delivery times — please try again.';
@@ -249,17 +290,24 @@
             });
     }
 
-    function renderSlots(slots) {
+    function renderSlots(slots, blockedReason) {
         chipsContainer.innerHTML = '';
 
         if (slots.length === 0) {
-            emptyMsg.textContent = 'No delivery windows available for this date — try another date.';
+            emptyMsg.textContent = blockedReason
+                ? `We're closed on this date (${blockedReason}) — please choose another date.`
+                : 'No delivery windows available for this date — try another date.';
             emptyMsg.style.display = 'block';
             slotValueInput.value = '';
             return;
         }
 
-        emptyMsg.style.display = 'none';
+        if (slots.every(slot => slot.full)) {
+            emptyMsg.textContent = 'Every delivery window on this date is fully booked — please choose another date.';
+            emptyMsg.style.display = 'block';
+        } else {
+            emptyMsg.style.display = 'none';
+        }
         const previouslySelected = slotValueInput.value;
         let stillValid = false;
 
@@ -269,6 +317,20 @@
             chip.className = 'slot-chip';
             chip.textContent = slot.label;
             chip.setAttribute('aria-pressed', 'false');
+
+            // Full time frames stay visible (so the customer can see why a
+            // time is missing) but can't be picked; the server re-checks
+            // capacity under a lock regardless.
+            if (slot.full) {
+                chip.disabled = true;
+                const tag = document.createElement('span');
+                tag.className = 'slot-full-tag';
+                tag.textContent = 'Full';
+                chip.appendChild(tag);
+                chip.setAttribute('aria-label', `${slot.label}, fully booked`);
+                chipsContainer.appendChild(chip);
+                return;
+            }
 
             if (slot.value === previouslySelected) {
                 chip.classList.add('active');

@@ -169,6 +169,7 @@ class ActivityLogger
         return match (true) {
             isset($subject->order_number)        => 'Order #' . $subject->order_number,
             $subject instanceof \App\Models\Inventory => $subject->menuItem?->name ?? ('Inventory #' . $subject->id),
+            $subject instanceof \App\Models\BlockedDate => 'Blocked date ' . $subject->day()->format('M d, Y'),
             isset($subject->name)                => $subject->name,
             default                              => class_basename($subject) . ' #' . ($subject->id ?? '?'),
         };

@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboard;
 use App\Http\Controllers\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Admin\BookingController as AdminBookingController;
+use App\Http\Controllers\Admin\BookingRulesController as AdminBookingRulesController;
 use App\Http\Controllers\Admin\MenuController as AdminMenuController;
 use App\Http\Controllers\Admin\PackageController as AdminPackageController;
 use App\Http\Controllers\Admin\UtensilController as AdminUtensilController;
@@ -60,6 +61,14 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Orders detail page/status/mark-paid routes above since those already
     // branch on Order::isBooking() and need no booking-specific variants.
     Route::get('/bookings', [AdminBookingController::class, 'index'])->name('bookings');
+
+    // Booking Rules — capacity/lead-time settings and blocked dates, two
+    // tabs of one page.
+    Route::get('/booking-rules', [AdminBookingRulesController::class, 'index'])->name('booking-rules');
+    Route::post('/booking-rules', [AdminBookingRulesController::class, 'updateRules'])->name('booking-rules.update');
+    Route::get('/blocked-dates', [AdminBookingRulesController::class, 'blockedDates'])->name('blocked-dates');
+    Route::post('/blocked-dates', [AdminBookingRulesController::class, 'storeBlockedDate'])->name('blocked-dates.store');
+    Route::delete('/blocked-dates/{id}', [AdminBookingRulesController::class, 'destroyBlockedDate'])->name('blocked-dates.destroy');
 
     // Menu
     Route::get('/menu', [AdminMenuController::class, 'index'])->name('menu');
