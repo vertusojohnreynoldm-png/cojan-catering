@@ -270,9 +270,7 @@
         </div>
     </div>
 
-    <a href="{{ $order->isBooking() ? route('admin.bookings') : route('admin.orders') }}"
-       style="display:inline-block;margin-top:1rem;color:var(--green-dark);border:1.5px solid var(--green-dark);
-              border-radius:10px;padding:8px 18px;text-decoration:none;font-size:.9rem;">
+    <a href="{{ $order->isBooking() ? route('admin.bookings') : route('admin.orders') }}" class="cj-back-link">
         ← Back to {{ $order->isBooking() ? 'Bookings' : 'Orders' }}
     </a>
 </div>

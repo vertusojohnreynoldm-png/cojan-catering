@@ -101,9 +101,7 @@
         </div>
     </div>
 
-    <a href="{{ route('admin.dashboard') }}"
-       style="display:inline-block;margin-top:1rem;color:var(--green-dark);border:1.5px solid var(--green-dark);
-              border-radius:10px;padding:8px 18px;text-decoration:none;font-size:.9rem;">
+    <a href="{{ route('admin.dashboard') }}" class="cj-back-link">
         ← Back to Dashboard
     </a>
 </div>
@@ -120,7 +118,7 @@
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="cj-label">Menu Item <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Menu Item <span style="color:var(--required);">*</span></label>
                         <select name="menu_item_id" class="cj-select" required>
                             <option value="">Select menu item</option>
                             @foreach(App\Models\MenuItem::with('category')->get() as $menuItem)
@@ -129,15 +127,15 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Quantity <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Quantity <span style="color:var(--required);">*</span></label>
                         <input type="number" name="quantity" class="cj-input" min="0" required>
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Unit <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Unit <span style="color:var(--required);">*</span></label>
                         <input type="text" name="unit" class="cj-input" placeholder="e.g. pcs, kg, liters" required>
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Low Stock Threshold <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Low Stock Threshold <span style="color:var(--required);">*</span></label>
                         <input type="number" name="low_stock_threshold" class="cj-input" min="1" value="10" required>
                     </div>
                 </div>
@@ -164,15 +162,15 @@
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="cj-label">Quantity <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Quantity <span style="color:var(--required);">*</span></label>
                         <input type="number" name="quantity" id="editQuantity" class="cj-input" min="0" required>
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Unit <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Unit <span style="color:var(--required);">*</span></label>
                         <input type="text" name="unit" id="editUnit" class="cj-input" required>
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Low Stock Threshold <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Low Stock Threshold <span style="color:var(--required);">*</span></label>
                         <input type="number" name="low_stock_threshold" id="editThreshold" class="cj-input" min="1" required>
                     </div>
                 </div>

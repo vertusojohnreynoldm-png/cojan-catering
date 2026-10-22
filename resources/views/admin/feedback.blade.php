@@ -74,9 +74,7 @@
         </div>
     </div>
 
-    <a href="{{ route('admin.dashboard') }}"
-       style="display:inline-block;margin-top:1rem;color:var(--green-dark);border:1.5px solid var(--green-dark);
-              border-radius:10px;padding:8px 18px;text-decoration:none;font-size:.9rem;">
+    <a href="{{ route('admin.dashboard') }}" class="cj-back-link">
         ← Back to Dashboard
     </a>
 </div>

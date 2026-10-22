@@ -66,9 +66,7 @@
         </div>
     </div>
 
-    <a href="{{ route('admin.dashboard') }}"
-       style="display:inline-block;margin-top:1rem;color:var(--green-dark);border:1.5px solid var(--green-dark);
-              border-radius:10px;padding:8px 18px;text-decoration:none;font-size:.9rem;">
+    <a href="{{ route('admin.dashboard') }}" class="cj-back-link">
         ← Back to Dashboard
     </a>
 </div>
@@ -85,11 +83,11 @@
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="cj-label">Name <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Name <span style="color:var(--required);">*</span></label>
                         <input type="text" name="name" class="cj-input" required>
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Category <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Category <span style="color:var(--required);">*</span></label>
                         <select name="category_id" class="cj-select" required>
                             @foreach($categories as $category)
                                 <option value="{{ $category->id }}">{{ $category->name }}</option>
@@ -97,7 +95,7 @@
                         </select>
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Price <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Price <span style="color:var(--required);">*</span></label>
                         <input type="number" name="price" class="cj-input" step="0.01" min="0" required>
                     </div>
                     <div class="mb-3">

@@ -21,8 +21,6 @@
         .cj-card-header { background: #92400e; }
         .cj-table thead tr { background: #92400e; }
         .cj-table tbody tr:hover { background: #fef3c7; }
-        .btn-del { background: #d97706; color: white; border: none; padding: .45rem 1.1rem; border-radius: 6px; font-size: .85rem; font-weight: 500; cursor: pointer; transition: all .22s ease; text-decoration: none; display: inline-block; }
-        .btn-del:hover { background: #b45309; color: white; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(217,119,6,.3); }
         .scan-box { background: white; border-radius: 12px; padding: 1.5rem; border: 2px dashed rgba(217,119,6,.3); margin-bottom: 1.5rem; }
         .scan-box h5 { font-family: 'Playfair Display', serif; color: #92400e; margin-bottom: 1rem; }
     </style>
@@ -62,7 +60,7 @@
         <form method="POST" action="{{ route('delivery.scan') }}" class="d-flex gap-2">
             @csrf
             <input type="text" name="order_number" class="cj-input" placeholder="Enter order number (e.g. ORD-XXXXXXXX)" style="max-width:400px">
-            <button type="submit" class="btn-del">Find Order</button>
+            <button type="submit" class="btn-cj-amber">Find Order</button>
         </form>
     </div>
 
@@ -100,7 +98,7 @@
                             </td>
                             <td>{{ $delivery->assigned_at ? $delivery->assigned_at->format('M d, Y') : 'N/A' }}</td>
                             <td>
-                                <a href="{{ route('delivery.orders.show', $delivery->id) }}" class="btn-del">View</a>
+                                <a href="{{ route('delivery.orders.show', $delivery->id) }}" class="btn-cj btn-cj-sm">View</a>
                             </td>
                         </tr>
                         @endforeach

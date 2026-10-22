@@ -36,15 +36,15 @@
                 @csrf
                 <div class="row g-3">
                     <div class="col-12 col-md-6">
-                        <label class="cj-label">Name <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Name <span style="color:var(--required);">*</span></label>
                         <input type="text" name="name" class="cj-input" value="{{ $package->name }}" required>
                     </div>
                     <div class="col-6 col-md-3">
-                        <label class="cj-label">Pax <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Pax <span style="color:var(--required);">*</span></label>
                         <input type="number" name="pax" class="cj-input" min="1" value="{{ $package->pax }}" required>
                     </div>
                     <div class="col-6 col-md-3">
-                        <label class="cj-label">Price <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Price <span style="color:var(--required);">*</span></label>
                         <input type="number" name="price" class="cj-input" step="0.01" min="0" value="{{ $package->price }}" required>
                     </div>
                     <div class="col-12">
@@ -60,7 +60,7 @@
                     </div>
 
                     <div class="col-12 col-md-6">
-                        <label class="cj-label">Included Menu Items <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Included Menu Items <span style="color:var(--required);">*</span></label>
                         <p style="font-size:.78rem;color:var(--text-light);margin-bottom:.5rem;">Set a quantity for each dish to include; leave at 0 to exclude.</p>
                         <div style="max-height:220px;overflow-y:auto;border:1.5px solid #d1d5db;border-radius:6px;padding:.5rem .75rem;">
                             @foreach($menuItems as $menuItem)
@@ -74,7 +74,7 @@
                         </div>
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="cj-label">Included Utensils <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Included Utensils <span style="color:var(--required);">*</span></label>
                         <p style="font-size:.78rem;color:var(--text-light);margin-bottom:.5rem;">Quantity needed per order of this package.</p>
                         <div style="max-height:220px;overflow-y:auto;border:1.5px solid #d1d5db;border-radius:6px;padding:.5rem .75rem;">
                             @foreach($utensils as $utensil)

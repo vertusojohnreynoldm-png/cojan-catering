@@ -57,8 +57,8 @@
         <form method="POST" action="{{ route('customer.feedback.store', $order->id) }}">
             @csrf
             <fieldset class="mb-4" style="border:none;padding:0;margin:0 0 1.5rem;">
-                <legend style="font-weight:600;font-size:.9rem;margin-bottom:.75rem;padding:0;">
-                    Rating <span style="color:#e74c3c;">*</span>
+                <legend class="cj-label" style="margin-bottom:.75rem;padding:0;">
+                    Rating <span style="color:var(--required);">*</span>
                 </legend>
                 <div class="star-rating">
                     <input type="radio" name="rating" id="star5" value="5" aria-label="5 stars">
@@ -74,23 +74,12 @@
                 </div>
             </fieldset>
             <div class="mb-3">
-                <label style="font-weight:600;font-size:.9rem;margin-bottom:.4rem;display:block;">
-                    Comment (Optional)
-                </label>
-                <textarea name="comment" rows="4"
-                    placeholder="Tell us about your experience..."
-                    class="cj-mobile-field"
-                    style="width:100%;border:1.5px solid #ddd;border-radius:10px;
-                           padding:10px 14px;font-size:.9rem;outline:none;
-                           font-family:'DM Sans',sans-serif;resize:vertical;"></textarea>
+                <label class="cj-label">Comment (Optional)</label>
+                <textarea name="comment" rows="4" placeholder="Tell us about your experience..." class="cj-textarea"></textarea>
             </div>
             <div class="d-flex gap-2 flex-wrap">
                 <button type="submit" class="btn-cj btn-cj">Submit Feedback</button>
-                <a href="{{ route('customer.orders.show', $order->id) }}"
-                   style="color:var(--green-dark);border:1.5px solid var(--green-dark);
-                          border-radius:10px;padding:8px 18px;text-decoration:none;font-size:.9rem;">
-                    Cancel
-                </a>
+                <a href="{{ route('customer.orders.show', $order->id) }}" class="cj-back-link">Cancel</a>
             </div>
         </form>
     </div>

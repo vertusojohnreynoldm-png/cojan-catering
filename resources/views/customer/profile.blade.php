@@ -27,12 +27,12 @@
                 <div class="cj-card-header">Account Details</div>
                 <div class="cj-card-body">
                     <div class="mb-3">
-                        <label class="cj-label">Full Name <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Full Name <span style="color:var(--required);">*</span></label>
                         <input type="text" name="name" class="cj-input"
                                value="{{ old('name', $user->name) }}" required>
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Email Address <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Email Address <span style="color:var(--required);">*</span></label>
                         <input type="email" name="email" class="cj-input"
                                value="{{ old('email', $user->email) }}" required>
                     </div>

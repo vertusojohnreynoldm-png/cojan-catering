@@ -147,9 +147,7 @@
 </div>
 
 <div class="d-flex gap-2 mt-3 flex-wrap">
-    <a href="{{ route('customer.orders') }}"
-       style="color:var(--green-dark);border:1.5px solid var(--green-dark);
-              border-radius:10px;padding:8px 18px;text-decoration:none;font-size:.9rem;">
+    <a href="{{ route('customer.orders') }}" class="cj-back-link">
         ← Back to Orders
     </a>
     @if($order->status === 'delivered')

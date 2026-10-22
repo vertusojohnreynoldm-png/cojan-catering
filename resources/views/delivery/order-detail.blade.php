@@ -17,8 +17,6 @@
         .cj-card-header { background: #92400e; }
         .cj-table thead tr { background: #92400e; }
         .cj-table tbody tr:hover { background: #fef3c7; }
-        .btn-del { background: #d97706; color: white; border: none; padding: .45rem 1.1rem; border-radius: 6px; font-size: .85rem; font-weight: 500; cursor: pointer; transition: all .22s ease; text-decoration: none; display: inline-block; }
-        .btn-del:hover { background: #b45309; color: white; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(217,119,6,.3); }
     </style>
 </head>
 <body>
@@ -84,7 +82,7 @@
                                     <option value="in_transit" {{ $delivery->status == 'in_transit' ? 'selected' : '' }}>In Transit</option>
                                     <option value="failed" {{ $delivery->status == 'failed' ? 'selected' : '' }}>Failed</option>
                                 </select>
-                                <button type="submit" class="btn-del">Update</button>
+                                <button type="submit" class="btn-cj-amber">Update</button>
                             </div>
                         </form>
                         <p style="font-size:.78rem;color:var(--text-light);margin-top:.5rem;margin-bottom:0;">
@@ -359,9 +357,7 @@
         </div>
     </div>
 
-    <a href="{{ route('delivery.dashboard') }}"
-       style="display:inline-block;margin-top:1rem;color:#92400e;border:1.5px solid #92400e;
-              border-radius:10px;padding:8px 18px;text-decoration:none;font-size:.9rem;">
+    <a href="{{ route('delivery.dashboard') }}" class="cj-back-link">
         ← Back to Dashboard
     </a>
 </div>

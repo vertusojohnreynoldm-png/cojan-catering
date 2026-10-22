@@ -36,11 +36,11 @@
                 @csrf
                 <div class="row g-3">
                     <div class="col-12 col-md-6">
-                        <label class="cj-label">Name <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Name <span style="color:var(--required);">*</span></label>
                         <input type="text" name="name" class="cj-input" value="{{ $menuItem->name }}" required>
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="cj-label">Category <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Category <span style="color:var(--required);">*</span></label>
                         <select name="category_id" class="cj-select" required>
                             @foreach($categories as $category)
                                 <option value="{{ $category->id }}" {{ $menuItem->category_id == $category->id ? 'selected' : '' }}>
@@ -50,7 +50,7 @@
                         </select>
                     </div>
                     <div class="col-12 col-md-6">
-                        <label class="cj-label">Price <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Price <span style="color:var(--required);">*</span></label>
                         <input type="number" name="price" class="cj-input" step="0.01" min="0" value="{{ $menuItem->price }}" required>
                     </div>
                     <div class="col-12 col-md-6">

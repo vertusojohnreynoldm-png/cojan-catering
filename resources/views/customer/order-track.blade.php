@@ -8,8 +8,7 @@
 
 @section('content')
 <div class="d-flex align-items-center gap-2 mb-1">
-    <a href="{{ route('customer.dashboard') }}"
-       style="color:var(--green-dark);text-decoration:none;font-size:.9rem;">← Back to Dashboard</a>
+    <a href="{{ route('customer.dashboard') }}" class="cj-back-link" style="margin-top:0;">← Back to Dashboard</a>
 </div>
 <h1 class="cj-page-title">Order Tracking</h1>
 <p class="cj-page-sub">Order #{{ $order->order_number }}</p>

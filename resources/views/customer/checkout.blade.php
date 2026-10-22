@@ -83,42 +83,23 @@
                 <form method="POST" action="{{ route('customer.orders.store') }}" id="checkout-form">
                     @csrf
                     <div class="mb-3">
-                        <label style="font-weight:600;font-size:.9rem;margin-bottom:.4rem;display:block;">
-                            Delivery Address <span style="color:#e74c3c;">*</span>
-                        </label>
+                        <label class="cj-label">Delivery Address <span style="color:var(--required);">*</span></label>
                         <textarea name="delivery_address" rows="3" required autocomplete="street-address"
-                            class="cj-mobile-field"
-                            style="width:100%;border:1.5px solid #ddd;border-radius:10px;
-                                   padding:10px 14px;font-size:.9rem;outline:none;
-                                   font-family:'DM Sans',sans-serif;resize:vertical;">{{ auth()->user()->address }}</textarea>
+                            class="cj-textarea">{{ auth()->user()->address }}</textarea>
                     </div>
                     <div class="mb-3">
-                        <label style="font-weight:600;font-size:.9rem;margin-bottom:.4rem;display:block;">
-                            Contact Number <span style="color:#e74c3c;">*</span>
-                        </label>
+                        <label class="cj-label">Contact Number <span style="color:var(--required);">*</span></label>
                         <input type="tel" name="delivery_phone" required inputmode="tel" autocomplete="tel"
-                               value="{{ auth()->user()->phone }}"
-                               class="cj-mobile-field"
-                               style="width:100%;border:1.5px solid #ddd;border-radius:10px;
-                                      padding:10px 14px;font-size:.9rem;outline:none;">
+                               value="{{ auth()->user()->phone }}" class="cj-input">
                     </div>
                     <div class="mb-3">
-                        <label style="font-weight:600;font-size:.9rem;margin-bottom:.4rem;display:block;">
-                            Order Notes (Optional)
-                        </label>
-                        <textarea name="notes" rows="2"
-                            placeholder="Special instructions..."
-                            class="cj-mobile-field"
-                            style="width:100%;border:1.5px solid #ddd;border-radius:10px;
-                                   padding:10px 14px;font-size:.9rem;outline:none;
-                                   font-family:'DM Sans',sans-serif;resize:vertical;"></textarea>
+                        <label class="cj-label">Order Notes (Optional)</label>
+                        <textarea name="notes" rows="2" placeholder="Special instructions..." class="cj-textarea"></textarea>
                     </div>
 
                     @php $selectedDeliveryType = old('delivery_type', 'asap'); @endphp
                     <div class="mb-3">
-                        <label class="cj-label" style="font-weight:600;font-size:.9rem;margin-bottom:.4rem;display:block;">
-                            Delivery Time <span style="color:#e74c3c;">*</span>
-                        </label>
+                        <label class="cj-label">Delivery Time <span style="color:var(--required);">*</span></label>
                         <div class="row g-2">
                             <div class="col-6">
                                 <label for="dt-asap" class="delivery-type-card {{ $selectedDeliveryType === 'asap' ? 'active' : '' }}">
@@ -144,7 +125,7 @@
                     <div id="schedule-panel" style="{{ $selectedDeliveryType === 'scheduled' ? '' : 'display:none;' }} margin-bottom:1rem;">
                         <div class="mb-3">
                             <label class="cj-label">Delivery Date</label>
-                            <input type="date" name="delivery_date" id="delivery-date" class="cj-input cj-mobile-field"
+                            <input type="date" name="delivery_date" id="delivery-date" class="cj-input"
                                    min="{{ $minDeliveryDate }}" max="{{ $maxDeliveryDate }}"
                                    value="{{ old('delivery_date', $minDeliveryDate) }}">
                         </div>

@@ -71,9 +71,7 @@
         </div>
     </div>
 
-    <a href="{{ route('admin.dashboard') }}"
-       style="display:inline-block;margin-top:1rem;color:var(--green-dark);border:1.5px solid var(--green-dark);
-              border-radius:10px;padding:8px 18px;text-decoration:none;font-size:.9rem;">
+    <a href="{{ route('admin.dashboard') }}" class="cj-back-link">
         ← Back to Dashboard
     </a>
 </div>
@@ -90,19 +88,19 @@
                 @csrf
                 <div class="modal-body">
                     <div class="mb-3">
-                        <label class="cj-label">Name <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Name <span style="color:var(--required);">*</span></label>
                         <input type="text" name="name" class="cj-input" required>
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Email <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Email <span style="color:var(--required);">*</span></label>
                         <input type="email" name="email" class="cj-input" required>
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Password <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Password <span style="color:var(--required);">*</span></label>
                         <input type="password" name="password" class="cj-input" required>
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Role <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Role <span style="color:var(--required);">*</span></label>
                         <select name="role" class="cj-select" required>
                             <option value="customer">Customer</option>
                             <option value="delivery">Delivery</option>

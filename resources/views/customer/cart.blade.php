@@ -65,7 +65,7 @@
                             <td>₱{{ number_format($item['price'] * $item['quantity'], 2) }}</td>
                             <td>
                                 <a href="{{ route('customer.cart.remove', $id) }}"
-                                   style="color:#e74c3c;font-size:.85rem;text-decoration:none;">✕ Remove</a>
+                                   style="color:var(--danger);font-size:.85rem;text-decoration:none;">✕ Remove</a>
                             </td>
                         </tr>
                         @endforeach
@@ -95,8 +95,8 @@
 
     <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
         <a href="{{ route('customer.cart.clear') }}"
-           style="color:#e74c3c;border:1.5px solid #e74c3c;border-radius:10px;
-                  padding:8px 18px;text-decoration:none;font-size:.9rem;">
+           style="color:var(--danger);border:1.5px solid var(--danger);border-radius:var(--radius-base);
+                  padding:8px 18px;text-decoration:none;font-size:var(--fs-sm);">
             🗑 Clear Cart
         </a>
         <a href="{{ route('customer.checkout') }}" class="btn-cj btn-cj">

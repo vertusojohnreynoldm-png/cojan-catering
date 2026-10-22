@@ -19,16 +19,54 @@
      both under the 4.5:1 AA minimum for normal-size text. This shade clears
      4.5:1 on both (4.93:1 / 5.4:1) while staying visually a muted gray. */
   --text-light:   #5f6b7a;
+  /* Same AA-safe shade as --text-light, under its "intent" name — Stage 3's
+     design-consistency pass replaces the #aaa/#999/#888 strays scattered
+     across admin/customer pages with this, not a 4th gray. */
+  --text-muted:   var(--text-light);
   --white:        #ffffff;
   --danger:       #c0392b;
   --danger-light: #fdecea;
+  /* Same value #e74c3c already used 40+ times (by hand) for required-field
+     asterisks everywhere — token-ified as its own name rather than merged
+     into --danger, which is a visibly different shade and would be a real,
+     if small, color change rather than a pure consolidation. */
+  --required:     #e74c3c;
   --shadow-sm:    0 2px 8px rgba(122,46,29,.08);
   --shadow-md:    0 6px 24px rgba(122,46,29,.12);
   --shadow-lg:    0 16px 48px rgba(122,46,29,.16);
   --radius-sm:    6px;
+  /* The de facto standard already in use ~30+ times across the app (more
+     than --radius-sm or --radius-md individually) — named so going forward
+     there's a real token for it instead of everyone retyping "10px". */
+  --radius-base:  10px;
   --radius-md:    12px;
   --radius-lg:    20px;
   --transition:   all .22s cubic-bezier(.4,0,.2,1);
+
+  /* ── TYPE SCALE ── */
+  --fs-xs:   12px;
+  --fs-sm:   14px;
+  --fs-base: 16px;
+  --fs-md:   18px;
+  --fs-lg:   22px;
+  --fs-xl:   28px;
+  --fs-2xl:  36px;
+  --lh-xs:   1.4;
+  --lh-sm:   1.45;
+  --lh-base: 1.5;
+  --lh-md:   1.4;
+  --lh-lg:   1.3;
+  --lh-xl:   1.25;
+  --lh-2xl:  1.2;
+
+  /* ── SPACING SCALE ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -137,6 +175,28 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: 1.25; }
 .btn-cj-sm {
   padding: .3rem .75rem;
   font-size: .78rem;
+}
+
+/* Repeated "← Back to X" link used at the bottom of most detail pages.
+   min-height + inline-flex guarantees a 44px tap target regardless of
+   the padding math (8px vertical padding alone falls short of 44px). */
+.cj-back-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  margin-top: var(--space-4);
+  padding: .5rem 1.1rem;
+  color: var(--green-dark);
+  border: 1.5px solid var(--green-dark);
+  border-radius: var(--radius-base);
+  font-size: var(--fs-sm);
+  font-weight: 500;
+  text-decoration: none;
+  transition: var(--transition);
+}
+.cj-back-link:hover {
+  background: var(--green-light, #FBE8DE);
+  color: var(--green-dark);
 }
 
 /* ── CARDS ── */
@@ -256,18 +316,22 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: 1.25; }
 .alert-info     { background: #dbeafe; color: #1e40af; border-left: 4px solid #3b82f6; }
 
 /* ── FORMS ── */
-.cj-label { display: block; font-size: .84rem; font-weight: 500; color: var(--text-mid); margin-bottom: .35rem; }
+.cj-label { display: block; font-size: var(--fs-sm); font-weight: 500; color: var(--text-mid); margin-bottom: .35rem; }
 .cj-input, .cj-select, .cj-textarea {
   width: 100%;
   padding: .6rem .9rem;
   border: 1.5px solid #c9bcae;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-base);
   font-family: 'DM Sans', sans-serif;
-  font-size: .9rem;
+  /* 16px everywhere, not just the old mobile-only override below — prevents
+     iOS Safari's zoom-on-focus and reads as a single consistent input size
+     across breakpoints instead of visibly resizing at the 768px line. */
+  font-size: var(--fs-base);
   color: var(--text-dark);
   background: #FFFAF3;
   transition: var(--transition);
   outline: none;
+  min-height: 44px;
 }
 .cj-input:focus, .cj-select:focus, .cj-textarea:focus {
   border-color: var(--green-mid);
@@ -678,11 +742,6 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: 1.25; }
     padding-top: .55rem;
     padding-bottom: .55rem;
   }
-  .cj-input, .cj-select, .cj-textarea {
-    font-size: 16px;
-    min-height: 44px;
-  }
-  .cj-textarea { min-height: 88px; } /* don't force a 2-line textarea down to one visible row */
   .cj-stepper-btn {
     width: 44px;
     height: 44px;

@@ -125,21 +125,21 @@
                     @endif
 
                     <div class="mb-3">
-                        <label class="cj-label">Your Name <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Your Name <span style="color:var(--required);">*</span></label>
                         <input type="text" name="contact_name" class="cj-input" required
                                value="{{ old('contact_name', auth()->user()->name) }}">
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Contact Number <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Contact Number <span style="color:var(--required);">*</span></label>
                         <input type="text" name="contact_number" class="cj-input" required
                                value="{{ old('contact_number', auth()->user()->phone) }}">
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Event Venue / Address <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Event Venue / Address <span style="color:var(--required);">*</span></label>
                         <textarea name="venue" class="cj-textarea" rows="2" required>{{ old('venue') }}</textarea>
                     </div>
                     <div class="mb-3">
-                        <label class="cj-label">Event Date &amp; Time <span style="color:#e74c3c;">*</span></label>
+                        <label class="cj-label">Event Date &amp; Time <span style="color:var(--required);">*</span></label>
                         <input type="datetime-local" name="event_date" id="avail-event-date" class="cj-input" required
                                value="{{ old('event_date') }}">
                         <small style="color:var(--text-light);font-size:.78rem;">

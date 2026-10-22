@@ -27,9 +27,7 @@
 </style>
 
 <div class="mb-3">
-    <label style="font-weight:600;font-size:.9rem;margin-bottom:.4rem;display:block;">
-        Payment Method <span style="color:#e74c3c;">*</span>
-    </label>
+    <label class="cj-label">Payment Method <span style="color:var(--required);">*</span></label>
     <p style="font-size:.78rem;color:var(--text-light);margin-bottom:.6rem;display:flex;align-items:center;gap:.35rem;">
         <i class="bi bi-shield-check"></i> Secure checkout — your information is only used to fulfill this order.
     </p>
@@ -88,17 +86,13 @@
     <p style="font-size:.78rem;color:var(--text-light);margin-bottom:.75rem;display:flex;align-items:center;gap:.35rem;justify-content:center;">
         <i class="bi bi-clock-history"></i> Payment verified manually by our team within a few hours — not an instant automated gateway.
     </p>
-    <label style="font-weight:600;font-size:.9rem;margin-bottom:.4rem;display:block;text-align:left;">
-        GCash Reference Number <span style="color:#e74c3c;">*</span>
-    </label>
+    <label class="cj-label" style="text-align:left;">GCash Reference Number <span style="color:var(--required);">*</span></label>
     <input type="text" name="gcash_reference" id="gcash_reference"
            value="{{ old('gcash_reference') }}"
            placeholder="e.g. 1234567890123"
            inputmode="numeric" autocomplete="off"
            {{ $selectedPayment === 'gcash' ? 'required' : '' }}
-           class="cj-mobile-field"
-           style="width:100%;border:1.5px solid #ddd;border-radius:10px;
-                  padding:10px 14px;font-size:.9rem;outline:none;">
+           class="cj-input">
 </div>
 
 <script>
