@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Models\Order;
 use App\Services\ActivityLogger;
+use App\Services\OrderCancellation;
 
 class OrderObserver
 {
@@ -32,7 +33,23 @@ class OrderObserver
 
     public function updated(Order $order): void
     {
-        $diff = ActivityLogger::diffFor($order, ignore: ['qr_code', 'gcash_reference']);
+        try {
+            $this->logUpdate($order);
+        } finally {
+            // Every way an order becomes cancelled (admin status change,
+            // No-show/Fake, unpaid auto-expiry) passes through here, so this
+            // is the one place utensil stock is returned. Guarded inside
+            // restoreStock() by stock_restored_at — never twice. After the
+            // log call so the activity log reads "cancelled" → "restored".
+            if ($order->wasChanged('status') && $order->status === 'cancelled') {
+                OrderCancellation::restoreStock($order);
+            }
+        }
+    }
+
+    private function logUpdate(Order $order): void
+    {
+        $diff = ActivityLogger::diffFor($order, ignore: ['qr_code', 'gcash_reference', 'reserved_utensils', 'stock_restored_at', 'flagged_at', 'flagged_by']);
         if ($diff === null) {
             return;
         }

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\InsufficientStockException;
+use App\Models\Order;
 use App\Models\Utensil;
 
 class PackageStockService
@@ -15,8 +16,11 @@ class PackageStockService
      *
      * @param  array<int, array{0: \App\Models\CateringPackage, 1: int}>  $packageLines
      *         Each entry is [CateringPackage $package, int $quantity].
+     * @return array<int, int>  utensil_id => quantity taken — store it on the
+     *         order (orders.reserved_utensils) so a cancellation can give
+     *         back exactly this much.
      */
-    public static function lockAndDecrement(array $packageLines): void
+    public static function lockAndDecrement(array $packageLines): array
     {
         $utensilNeeds = [];         // utensil_id => total quantity needed
         $packageNamesByUtensil = []; // utensil_id => [package names]
@@ -29,6 +33,21 @@ class PackageStockService
             }
         }
 
+        self::lockAndDecrementNeeds($utensilNeeds, $packageNamesByUtensil);
+
+        return $utensilNeeds;
+    }
+
+    /**
+     * The same lock-check-decrement for an exact utensil_id => quantity map
+     * (used when an admin reopens a cancelled order and its stock has to be
+     * taken out again). Call inside a transaction.
+     *
+     * @param  array<int, int>  $utensilNeeds
+     * @param  array<int, string[]>  $packageNamesByUtensil  only for the error message
+     */
+    public static function lockAndDecrementNeeds(array $utensilNeeds, array $packageNamesByUtensil = []): void
+    {
         if (empty($utensilNeeds)) {
             return;
         }
@@ -49,8 +68,9 @@ class PackageStockService
                 $packageNames = implode(', ', array_unique($packageNamesByUtensil[$utensilId] ?? []));
 
                 throw new InsufficientStockException(
-                    "Sorry, we don't have enough {$utensilName} in stock right now "
-                        . "to fulfill: {$packageNames}. Please try again later or reduce the quantity."
+                    "Sorry, we don't have enough {$utensilName} in stock right now"
+                        . ($packageNames ? " to fulfill: {$packageNames}" : '')
+                        . '. Please try again later or reduce the quantity.'
                 );
             }
         }
@@ -65,5 +85,28 @@ class PackageStockService
                 $utensilsInStock->get($utensilId)->decrement('quantity', $needed);
             }
         });
+    }
+
+    /**
+     * What this order took out of utensil stock: the exact amounts recorded
+     * when it was placed, or — for orders placed before that was recorded —
+     * worked out from its packages' current contents.
+     *
+     * @return array<int, int>  utensil_id => quantity
+     */
+    public static function utensilsHeldBy(Order $order): array
+    {
+        if (is_array($order->reserved_utensils)) {
+            return array_map('intval', $order->reserved_utensils);
+        }
+
+        $needs = [];
+        foreach ($order->orderItems()->whereNotNull('package_id')->with('package.utensils')->get() as $item) {
+            foreach ($item->package?->utensils ?? [] as $utensil) {
+                $needs[$utensil->id] = ($needs[$utensil->id] ?? 0) + $utensil->pivot->quantity_needed * $item->quantity;
+            }
+        }
+
+        return $needs;
     }
 }

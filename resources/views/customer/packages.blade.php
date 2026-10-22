@@ -16,7 +16,9 @@
 <h1 class="cj-page-title">Catering Packages</h1>
 <p class="cj-page-sub">Pax-based packages for events — dishes, chafing dishes, and utensils all included</p>
 
-@if($pendingLimitError)
+@if(auth()->user()->isBlocked())
+    <x-account-restricted-notice />
+@elseif($pendingLimitError)
     <div class="alert-cj alert-warning" role="status" id="pending-limit-note" style="align-items:flex-start;">
         <i class="bi bi-hourglass-split" style="margin-top:2px;"></i>
         <div>
@@ -87,7 +89,11 @@
                 @endif
 
                 <div class="menu-card-price">₱{{ number_format($package->price, 2) }}</div>
-                @if($pendingLimitError)
+                @if(auth()->user()->isBlocked())
+                <button type="button" class="btn-cj-amber btn-cj" style="width:100%;justify-content:center;padding:.55rem;" disabled>
+                    Booking unavailable
+                </button>
+                @elseif($pendingLimitError)
                 <button type="button" class="btn-cj-amber btn-cj" style="width:100%;justify-content:center;padding:.55rem;" disabled
                         aria-describedby="pending-limit-note">
                     Booking limit reached

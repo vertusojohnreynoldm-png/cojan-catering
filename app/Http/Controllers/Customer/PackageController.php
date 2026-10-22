@@ -204,7 +204,7 @@ class PackageController extends Controller
                 BookingCapacity::reserveCatering(Carbon::parse($booking['event_date']), auth()->id());
                 BookingCapacity::reservePendingSlot(auth()->id(), true);
 
-                PackageStockService::lockAndDecrement([[$package, 1]]);
+                $reservedUtensils = PackageStockService::lockAndDecrement([[$package, 1]]);
 
                 $order = Order::create([
                     'user_id'          => auth()->id(),
@@ -227,6 +227,7 @@ class PackageController extends Controller
                     'event_date'       => $booking['event_date'],
                     'event_type'       => $booking['event_type'] ?? null,
                     'idempotency_key'  => $request->submission_token,
+                    'reserved_utensils' => $reservedUtensils ?: null,
                 ]);
 
                 OrderItem::create([

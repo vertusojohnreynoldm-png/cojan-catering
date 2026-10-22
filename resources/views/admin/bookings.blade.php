@@ -82,7 +82,7 @@
                                 <td>{{ $package->pax ?? '—' }}</td>
                                 <td>₱{{ number_format($booking->total_amount, 2) }}</td>
                                 <td>
-                                    <x-order-status-badge :order="$booking" />
+                                    <x-order-status-badge :order="$booking" show-flag />
                                 </td>
                                 <td>
                                     <a href="{{ route('admin.orders.show', $booking->id) }}" class="btn-cj btn-cj-sm">View</a>

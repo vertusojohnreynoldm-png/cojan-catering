@@ -32,6 +32,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'street',
         'landmark',
         'email_verified_at',
+        'blocked_at',
+        'blocked_reason',
+        'blocked_by',
     ];
 
     protected $hidden = [
@@ -44,6 +47,7 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
+            'blocked_at'        => 'datetime',
         ];
     }
 
@@ -60,6 +64,15 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isDelivery(): bool
     {
         return $this->role === 'delivery';
+    }
+
+    /**
+     * Blocked customers keep their login, order history and chat, but
+     * can't place orders or bookings (EnsureCustomerNotBlocked).
+     */
+    public function isBlocked(): bool
+    {
+        return $this->blocked_at !== null;
     }
 
     /**

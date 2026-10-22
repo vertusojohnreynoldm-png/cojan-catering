@@ -5,6 +5,9 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\User;
+use App\Exceptions\InsufficientStockException;
+use App\Services\CustomerBlocking;
+use App\Services\OrderCancellation;
 use App\Services\OrderNotifier;
 use Illuminate\Http\Request;
 
@@ -43,7 +46,21 @@ class OrderController extends Controller
         $order = Order::findOrFail($id);
         $oldStatus = $order->status;
 
-        $order->update(['status' => $request->status]);
+        if ($oldStatus === 'cancelled' && $request->status !== 'cancelled') {
+            // Reopening: its utensils (already returned to stock) have to be
+            // reserved again, and it stops being flagged No-show/Fake.
+            try {
+                OrderCancellation::reopen($order, $request->status);
+            } catch (InsufficientStockException $e) {
+                return redirect()->route('admin.orders.show', $id)->with(
+                    'error',
+                    "Can't reopen this order — its utensils are no longer in stock. " . $e->getMessage()
+                );
+            }
+        } else {
+            // Cancelling returns utensil stock automatically (OrderObserver).
+            $order->update(['status' => $request->status]);
+        }
 
         if ($oldStatus !== $order->status) {
             OrderNotifier::sendStatusChanged($order);
@@ -51,6 +68,39 @@ class OrderController extends Controller
 
         return redirect()->route('admin.orders.show', $id)
             ->with('success', 'Order status updated successfully!');
+    }
+
+    /** No-show / Fake: cancel + flag, optionally blocking the customer too. */
+    public function flag(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'flag'           => 'required|in:' . implode(',', array_keys(Order::FLAGS)),
+            'reason'         => 'nullable|string|max:255',
+            'block_customer' => 'nullable|boolean',
+        ]);
+
+        $order = Order::with('user')->findOrFail($id);
+
+        if (!$order->isActive()) {
+            return redirect()->route('admin.orders.show', $id)
+                ->with('error', 'Only an order that is still active can be marked as a No-show or Fake.');
+        }
+
+        $reason = isset($validated['reason']) ? trim($validated['reason']) : null;
+        OrderCancellation::flag($order, $validated['flag'], $reason ?: null);
+        OrderNotifier::sendStatusChanged($order);
+
+        $message = ($order->isBooking() ? 'Booking' : 'Order') . ' marked as ' . Order::FLAGS[$validated['flag']] . ' and cancelled.';
+
+        if ($request->boolean('block_customer') && $order->user && $order->user->isCustomer() && !$order->user->isBlocked()) {
+            CustomerBlocking::block(
+                $order->user,
+                Order::FLAGS[$validated['flag']] . " on #{$order->order_number}" . ($reason ? " — {$reason}" : '')
+            );
+            $message .= " {$order->user->name} can no longer place orders.";
+        }
+
+        return redirect()->route('admin.orders.show', $id)->with('success', $message);
     }
 
     public function markPaymentPaid($id)

@@ -56,6 +56,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/orders/{id}/status', [AdminOrderController::class, 'updateStatus'])->name('orders.status');
     Route::post('/orders/{id}/assign', [AdminOrderController::class, 'assignDelivery'])->name('orders.assign');
     Route::post('/orders/{id}/mark-paid', [AdminOrderController::class, 'markPaymentPaid'])->name('orders.mark-paid');
+    Route::post('/orders/{id}/flag', [AdminOrderController::class, 'flag'])->name('orders.flag');
 
     // Catering Bookings (the Avail flow) — separate list, but reuses the
     // Orders detail page/status/mark-paid routes above since those already
@@ -94,6 +95,8 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::get('/users', [AdminUserController::class, 'index'])->name('users');
     Route::post('/users', [AdminUserController::class, 'store'])->name('users.store');
     Route::get('/users/{id}/delete', [AdminUserController::class, 'destroy'])->name('users.destroy');
+    Route::post('/users/{id}/block', [AdminUserController::class, 'block'])->name('users.block');
+    Route::post('/users/{id}/unblock', [AdminUserController::class, 'unblock'])->name('users.unblock');
 
     // Inventory
     Route::get('/inventory', [AdminInventoryController::class, 'index'])->name('inventory');
@@ -134,9 +137,9 @@ Route::middleware(['auth', 'role:customer'])->prefix('customer')->name('customer
     // Package booking (Avail flow) — separate from the regular cart checkout.
     // 'verified' gates the actual booking actions, not browsing the package
     // list above.
-    Route::post('/packages/avail', [PackageController::class, 'storeBooking'])->middleware('verified')->name('packages.avail');
-    Route::get('/packages/checkout', [PackageController::class, 'checkout'])->middleware('verified')->name('packages.checkout');
-    Route::post('/packages/checkout', [PackageController::class, 'store'])->middleware('verified')->name('packages.checkout.store');
+    Route::post('/packages/avail', [PackageController::class, 'storeBooking'])->middleware(['verified', 'not-blocked'])->name('packages.avail');
+    Route::get('/packages/checkout', [PackageController::class, 'checkout'])->middleware(['verified', 'not-blocked'])->name('packages.checkout');
+    Route::post('/packages/checkout', [PackageController::class, 'store'])->middleware(['verified', 'not-blocked'])->name('packages.checkout.store');
 
     // Cart
     Route::get('/cart', [CartController::class, 'index'])->name('cart');
@@ -146,11 +149,14 @@ Route::middleware(['auth', 'role:customer'])->prefix('customer')->name('customer
     Route::get('/cart/remove/{id}', [CartController::class, 'remove'])->name('cart.remove');
     Route::get('/cart/clear', [CartController::class, 'clear'])->name('cart.clear');
 
+    // Where 'not-blocked' sends a blocked customer — a polite explanation.
+    Route::view('/account-restricted', 'customer.account-restricted')->name('account-restricted');
+
     // Orders — 'verified' gates placing an order, not viewing past ones
     Route::get('/orders', [OrderController::class, 'index'])->name('orders');
-    Route::get('/checkout', [OrderController::class, 'checkout'])->middleware('verified')->name('checkout');
-    Route::get('/checkout/delivery-slots', [OrderController::class, 'deliverySlots'])->middleware('verified')->name('checkout.delivery-slots');
-    Route::post('/orders', [OrderController::class, 'store'])->middleware('verified')->name('orders.store');
+    Route::get('/checkout', [OrderController::class, 'checkout'])->middleware(['verified', 'not-blocked'])->name('checkout');
+    Route::get('/checkout/delivery-slots', [OrderController::class, 'deliverySlots'])->middleware(['verified', 'not-blocked'])->name('checkout.delivery-slots');
+    Route::post('/orders', [OrderController::class, 'store'])->middleware(['verified', 'not-blocked'])->name('orders.store');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
     Route::post('/orders/{id}/confirm-received', [OrderController::class, 'confirmReceived'])->name('orders.confirm-received');
 

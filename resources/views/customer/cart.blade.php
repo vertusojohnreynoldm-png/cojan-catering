@@ -6,6 +6,10 @@
 <x-breadcrumbs :items="['Menu' => route('customer.menu'), 'Cart' => null]" />
 <h1 class="cj-page-title">My Cart</h1>
 
+@if(auth()->user()->isBlocked())
+    <x-account-restricted-notice />
+@endif
+
 @if(!empty($cart) && $hasMenuItems && !$orderingOpen)
     <div class="alert-cj alert-warning mb-3">
         <i class="bi bi-clock-history"></i>
@@ -99,9 +103,13 @@
                   padding:8px 18px;text-decoration:none;font-size:var(--fs-sm);">
             🗑 Clear Cart
         </a>
-        <a href="{{ route('customer.checkout') }}" class="btn-cj btn-cj">
-            Proceed to Checkout →
-        </a>
+        @if(auth()->user()->isBlocked())
+            <button type="button" class="btn-cj btn-cj" disabled>Checkout unavailable</button>
+        @else
+            <a href="{{ route('customer.checkout') }}" class="btn-cj btn-cj">
+                Proceed to Checkout →
+            </a>
+        @endif
     </div>
 @endif
 @endsection

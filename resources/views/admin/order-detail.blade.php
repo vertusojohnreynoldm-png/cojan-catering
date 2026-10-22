@@ -100,7 +100,12 @@
             <div class="cj-card h-100">
                 <div class="cj-card-header">Order Information</div>
                 <div class="cj-card-body">
-                    <p><strong>Customer:</strong> {{ $order->user->name }}</p>
+                    <p>
+                        <strong>Customer:</strong> {{ $order->user->name }}
+                        @if($order->user->isBlocked())
+                            <span class="badge-cj badge-blocked" title="{{ $order->user->blocked_reason }}"><i class="bi bi-slash-circle"></i> Blocked</span>
+                        @endif
+                    </p>
                     <p><strong>Email:</strong> {{ $order->user->email }}</p>
                     <p><strong>Phone:</strong> {{ $order->delivery_phone }}</p>
                     <p>
@@ -133,7 +138,7 @@
                             {{ ucfirst($order->payment_status) }}
                         </span>
                     </p>
-                    @if($order->payment_status !== 'paid')
+                    @if($order->payment_status !== 'paid' && $order->status !== 'cancelled')
                         <form method="POST" action="{{ route('admin.orders.mark-paid', $order->id) }}">
                             @csrf
                             <button type="submit" class="btn-cj-amber btn-cj btn-cj-sm">Mark as Paid</button>
@@ -149,8 +154,26 @@
                 <div class="cj-card-header">Update Status</div>
                 <div class="cj-card-body">
                     <p><strong>Current Status:</strong>
-                        <x-order-status-badge :order="$order" />
+                        <x-order-status-badge :order="$order" show-flag />
                     </p>
+
+                    @if($order->flagLabel())
+                        <div class="alert-cj alert-danger" style="align-items:flex-start;font-size:var(--fs-sm);">
+                            <i class="bi bi-flag-fill" style="margin-top:2px;"></i>
+                            <div style="overflow-wrap:anywhere;">
+                                Marked <strong>{{ $order->flagLabel() }}</strong>
+                                {{ $order->flagged_at ? 'on ' . $order->flagged_at->format('M d, Y h:i A') : '' }}.
+                                @if($order->cancellation_reason)
+                                    <br>Reason: {{ $order->cancellation_reason }}
+                                @endif
+                            </div>
+                        </div>
+                    @endif
+                    @if($order->status === 'cancelled' && $order->stock_restored_at)
+                        <p style="font-size:var(--fs-xs);color:var(--text-light);">
+                            <i class="bi bi-box-arrow-in-left"></i> Utensils returned to stock {{ $order->stock_restored_at->format('M d, Y h:i A') }}.
+                        </p>
+                    @endif
 
                     @if($order->isBooking())
                         {{-- Bookings get a reduced, booking-appropriate set of
@@ -217,6 +240,21 @@
                                 </div>
                             </form>
                         @endif
+                    @endif
+
+                    @if($order->isActive())
+                        <hr class="divider">
+                        <p style="font-size:var(--fs-sm);margin-bottom:.5rem;"><strong>Problem with this {{ $order->isBooking() ? 'booking' : 'order' }}?</strong></p>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <button type="button" class="btn-cj btn-cj-sm cj-flag-btn" data-bs-toggle="modal" data-bs-target="#flagModal" data-flag="no_show"
+                                    style="background:transparent;color:var(--status-red-text);border-color:var(--status-red-text);">
+                                <i class="bi bi-person-x"></i> Mark No-show
+                            </button>
+                            <button type="button" class="btn-cj btn-cj-sm cj-flag-btn" data-bs-toggle="modal" data-bs-target="#flagModal" data-flag="fake"
+                                    style="background:transparent;color:var(--status-red-text);border-color:var(--status-red-text);">
+                                <i class="bi bi-flag"></i> Mark Fake
+                            </button>
+                        </div>
                     @endif
                 </div>
             </div>
@@ -287,7 +325,77 @@
     </a>
 </div>
 
+@if($order->isActive())
+<!-- No-show / Fake Modal -->
+<div class="modal fade" id="flagModal" tabindex="-1" aria-labelledby="flagModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="flagModalTitle">Flag {{ $order->isBooking() ? 'Booking' : 'Order' }} #{{ $order->order_number }}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ route('admin.orders.flag', $order->id) }}">
+                @csrf
+                <div class="modal-body">
+                    <p style="font-size:var(--fs-sm);color:var(--text-mid);">
+                        This cancels the {{ $order->isBooking() ? 'booking' : 'order' }}, returns its utensils to stock and emails
+                        the customer that it was cancelled. The flag and reason are only visible to admins.
+                    </p>
+                    <fieldset class="mb-3">
+                        <legend class="cj-label">What happened? <span style="color:var(--required);">*</span></legend>
+                        <div class="d-grid gap-2">
+                            @foreach(\App\Models\Order::FLAGS as $value => $label)
+                                <label class="cj-flag-option">
+                                    <input type="radio" name="flag" value="{{ $value }}" required {{ old('flag') === $value ? 'checked' : '' }}>
+                                    <span>
+                                        <strong>{{ $label }}</strong><br>
+                                        <small>{{ $value === 'no_show' ? 'The customer didn\'t show up or couldn\'t be reached on the day.' : 'The booking/order was never genuine (prank, fake details).' }}</small>
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                    </fieldset>
+                    <div class="mb-3">
+                        <label for="flag-reason" class="cj-label">Note (optional)</label>
+                        <input type="text" id="flag-reason" name="reason" class="cj-input" maxlength="255"
+                               placeholder="e.g. Nobody at the venue, phone off" value="{{ old('reason') }}">
+                    </div>
+                    @if($order->user->isCustomer() && !$order->user->isBlocked())
+                        <label class="cj-flag-option" style="border-style:dashed;">
+                            <input type="checkbox" name="block_customer" value="1" {{ old('block_customer') ? 'checked' : '' }}>
+                            <span>Also block <strong>{{ $order->user->name }}</strong> from placing new orders</span>
+                        </label>
+                    @endif
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn-cj"
+                            style="background:transparent;color:var(--green-dark);border-color:var(--green-dark);"
+                            data-bs-dismiss="modal">Back</button>
+                    <button type="submit" class="btn-cj-danger btn-cj">Cancel &amp; Flag</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endif
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+(function () {
+    const modal = document.getElementById('flagModal');
+    if (!modal) return;
+    // Pre-select whichever button opened the modal (No-show or Fake).
+    modal.addEventListener('show.bs.modal', function (e) {
+        const flag = e.relatedTarget && e.relatedTarget.dataset.flag;
+        if (!flag) return;
+        const radio = modal.querySelector(`input[name="flag"][value="${flag}"]`);
+        if (radio) radio.checked = true;
+    });
+    @if($errors->has('flag') || $errors->has('reason'))
+        new bootstrap.Modal(modal).show();
+    @endif
+})();
+</script>
 @vite(['resources/js/app.js'])
 </body>
 </html>

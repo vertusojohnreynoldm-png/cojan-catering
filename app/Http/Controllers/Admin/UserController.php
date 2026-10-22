@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Rules\PhilippineMobileNumber;
 use App\Rules\ValidPersonName;
+use App\Services\CustomerBlocking;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -13,7 +14,9 @@ class UserController extends Controller
 {
     public function index()
     {
-        $users = User::orderBy('role')->orderBy('name')->get();
+        // Blocked customers first within their role group, so they're easy
+        // to find and unblock.
+        $users = User::orderBy('role')->orderByRaw('blocked_at IS NULL')->orderBy('name')->get();
 
         return view('admin.users', compact('users'));
     }
@@ -44,6 +47,34 @@ class UserController extends Controller
         ]);
 
         return redirect()->route('admin.users')->with('success', 'User created successfully!');
+    }
+
+    public function block(Request $request, $id)
+    {
+        $user = User::findOrFail($id);
+
+        if (!$user->isCustomer()) {
+            return redirect()->route('admin.users')->with('error', 'Only customer accounts can be blocked.');
+        }
+
+        $validated = $request->validate([
+            'reason' => 'required|string|max:255',
+        ], [
+            'reason.required' => 'Please give a reason — it helps other admins later.',
+        ]);
+
+        CustomerBlocking::block($user, trim($validated['reason']));
+
+        return redirect()->route('admin.users')
+            ->with('success', "{$user->name} is blocked from placing orders. They can still log in and message you.");
+    }
+
+    public function unblock($id)
+    {
+        $user = User::findOrFail($id);
+        CustomerBlocking::unblock($user);
+
+        return redirect()->route('admin.users')->with('success', "{$user->name} can place orders again.");
     }
 
     public function destroy($id)

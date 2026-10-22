@@ -38,11 +38,20 @@ class Order extends Model
         'requested_delivery_at',
         'delivery_window_label',
         'idempotency_key',
+        'flag',
+        'cancellation_reason',
+        'flagged_at',
+        'flagged_by',
+        'reserved_utensils',
+        'stock_restored_at',
     ];
 
     protected $casts = [
         'event_date' => 'datetime',
         'requested_delivery_at' => 'datetime',
+        'flagged_at' => 'datetime',
+        'stock_restored_at' => 'datetime',
+        'reserved_utensils' => 'array',
     ];
 
     public function user()
@@ -113,6 +122,23 @@ class Order extends Model
             && !in_array($this->status, ['out_for_delivery', 'delivered', 'cancelled'], true)
             && $this->requested_delivery_at->isFuture()
             && now()->diffInMinutes($this->requested_delivery_at, false) <= 60;
+    }
+
+    public const FLAGS = ['no_show' => 'No-show', 'fake' => 'Fake'];
+
+    /**
+     * Admin-only marker for a cancelled order an admin flagged as a no-show
+     * or a fake booking. Customers only ever see "Cancelled".
+     */
+    public function flagLabel(): ?string
+    {
+        return self::FLAGS[$this->flag] ?? null;
+    }
+
+    /** Pending / confirmed / preparing / out for delivery — not finished or cancelled. */
+    public function isActive(): bool
+    {
+        return !in_array($this->status, ['delivered', 'cancelled'], true);
     }
 
     /**

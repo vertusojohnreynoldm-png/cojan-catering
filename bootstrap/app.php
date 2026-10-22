@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'not-blocked' => \App\Http\Middleware\EnsureCustomerNotBlocked::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

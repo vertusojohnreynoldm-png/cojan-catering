@@ -270,7 +270,7 @@ class OrderController extends Controller
                     $packageLines[] = [$package, $item['quantity']];
                 }
 
-                PackageStockService::lockAndDecrement($packageLines);
+                $reservedUtensils = PackageStockService::lockAndDecrement($packageLines);
 
                 $order = Order::create([
                     'user_id'          => auth()->id(),
@@ -296,6 +296,7 @@ class OrderController extends Controller
                     'requested_delivery_at'  => $requestedDeliveryAt,
                     'delivery_window_label'  => $deliveryWindowLabel,
                     'idempotency_key'  => $request->submission_token,
+                    'reserved_utensils' => $reservedUtensils ?: null,
                 ]);
 
                 foreach ($cart as $item) {

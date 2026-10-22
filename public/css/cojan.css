@@ -998,3 +998,57 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
   color: var(--text-mid);
 }
 .cj-unavailable-list li { padding: 2px 0; }
+
+/* ── ACCOUNT RESTRICTED NOTICE (blocked customers) ── */
+.cj-restricted-notice { align-items: flex-start; }
+.cj-restricted-notice > i { margin-top: 3px; }
+.cj-restricted-notice p { font-size: var(--fs-sm); }
+
+/* ── ADMIN FLAGS & BLOCKED CUSTOMERS ── */
+.badge-flag    { background: var(--status-red-text); color: var(--white); } /* darker than "Cancelled" so the two read apart */
+.badge-blocked { background: var(--status-red-bg); color: var(--status-red-text); }
+
+/* Stacked table (≤640px): each row becomes a labelled card, so wide admin
+   tables (users) fit a phone without sideways scrolling. Add
+   class="cj-table cj-table-stack" and data-label="…" on each <td>. */
+@media (max-width: 640px) {
+  .cj-table-stack thead { display: none; }
+  .cj-table-stack, .cj-table-stack tbody, .cj-table-stack tr, .cj-table-stack td { display: block; width: 100%; }
+  .cj-table-stack tbody tr { padding: var(--space-3) var(--space-4); border-bottom: 1px solid rgba(122,46,29,.12); }
+  .cj-table-stack tbody td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--space-1) 0;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+  .cj-table-stack tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-size: var(--fs-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: var(--text-light);
+    text-align: left;
+  }
+  .cj-table-stack tbody td[data-label=""]::before { content: none; }
+  .cj-table-stack tbody td.cj-td-actions { justify-content: flex-start; flex-wrap: wrap; padding-top: var(--space-2); }
+}
+.cj-flag-option {
+  display: flex;
+  align-items: flex-start;
+  gap: .6rem;
+  padding: .7rem .8rem;
+  border: 1.5px solid rgba(122,46,29,.18);
+  border-radius: var(--radius-base);
+  cursor: pointer;
+  font-size: var(--fs-sm);
+  min-height: 44px;
+}
+.cj-flag-option:has(input:checked) { border-color: var(--status-red-text); background: var(--status-red-bg); }
+.cj-flag-option input { width: 20px; height: 20px; flex: 0 0 20px; margin-top: 1px; accent-color: var(--status-red-text); }
+.cj-flag-option small { color: var(--text-light); }
+.cj-blocked-note { width: 100%; color: var(--status-red-text); margin-bottom: .35rem; overflow-wrap: anywhere; }
