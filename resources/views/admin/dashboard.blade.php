@@ -18,6 +18,15 @@
 <div class="cj-page">
     <h1 class="cj-page-title">Welcome back, {{ auth()->user()->name }}!</h1>
     <p class="cj-page-sub">Here's what's happening with your catering business today.</p>
+    {{-- TEMPORARY (Oct 2026): confirms the live server is on a PHP release
+         that fixes CVE-2026-109618/109619. Admin-only — this page is behind
+         auth + role:admin. Remove once the patched version is confirmed. --}}
+    @php $phpPatched = version_compare(PHP_VERSION, '8.3.36', '>='); @endphp
+    <p class="cj-php-version {{ $phpPatched ? 'ok' : 'bad' }}" role="status">
+        <i class="bi {{ $phpPatched ? 'bi-shield-check' : 'bi-shield-exclamation' }}" aria-hidden="true"></i>
+        Server PHP {{ PHP_VERSION }} —
+        {{ $phpPatched ? 'patched for the Oct 2026 PHP security release' : 'VULNERABLE: needs 8.3.36 or newer (CVE-2026-109618/109619)' }}
+    </p>
 
     <!-- Stats -->
     <div class="row g-3 mb-4">
