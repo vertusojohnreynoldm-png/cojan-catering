@@ -6,6 +6,7 @@ use App\Exceptions\BookingUnavailableException;
 use App\Exceptions\DuplicateSlotOrderException;
 use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
+use App\Services\UnpaidBookingExpirer;
 use App\Models\CateringPackage;
 use App\Models\MenuItem;
 use App\Models\Order;
@@ -29,6 +30,8 @@ class OrderController extends Controller
 {
     public function index()
     {
+        UnpaidBookingExpirer::runIfDue(); // lazy expiry — Railway has no scheduler
+
         $orders = Order::where('user_id', auth()->id())
             ->orderBy('created_at', 'desc')
             ->get();
@@ -365,11 +368,23 @@ class OrderController extends Controller
 
     public function show($id)
     {
+        UnpaidBookingExpirer::runIfDue(); // lazy expiry — Railway has no scheduler
+
         $order = Order::where('user_id', auth()->id())
             ->with('orderItems.menuItem', 'orderItems.package', 'delivery')
             ->findOrFail($id);
 
-        return view('customer.order-detail', compact('order'));
+        // The GCash QR is only needed while a downpayment is still due.
+        $gcashQr = null;
+        if ($order->canUploadReceipt()) {
+            try {
+                $gcashQr = QrCode::size(200)->generate(config('services.gcash.qr_payload'));
+            } catch (Throwable $e) {
+                // Leave null — the view shows the GCash number instead.
+            }
+        }
+
+        return view('customer.order-detail', compact('order', 'gcashQr'));
     }
 
     public function track($orderNumber)

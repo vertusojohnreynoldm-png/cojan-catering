@@ -128,6 +128,9 @@
                         <p><strong>Notes:</strong> {{ $order->notes }}</p>
                     @endif
                     <hr class="divider">
+                    @if($order->requiresDownpayment())
+                        @include('admin.partials.booking-payment')
+                    @else
                     <p><strong>Payment Method:</strong> {{ $order->payment_method === 'gcash' ? '📱 GCash' : '💵 Cash on Delivery' }}</p>
                     @if($order->payment_method === 'gcash' && $order->gcash_reference)
                         <p><strong>GCash Reference:</strong> <code>{{ $order->gcash_reference }}</code></p>
@@ -143,6 +146,7 @@
                             @csrf
                             <button type="submit" class="btn-cj-amber btn-cj btn-cj-sm">Mark as Paid</button>
                         </form>
+                    @endif
                     @endif
                 </div>
             </div>
@@ -180,7 +184,13 @@
                              actions — no 'preparing'/'out_for_delivery', no
                              delivery-personnel assignment, since there's no
                              delivery being tracked mid-route for an event. --}}
-                        @if($order->status === 'pending')
+                        @if($order->isAwaitingDownpayment())
+                            <p style="font-size:var(--fs-sm);color:var(--text-mid);margin-bottom:0;">
+                                <i class="bi bi-hourglass-split"></i>
+                                Waiting for the ₱{{ number_format($order->downpayment_amount, 2) }} GCash downpayment.
+                                Confirm it in the Payment section first — then you can confirm the booking.
+                            </p>
+                        @elseif($order->status === 'pending')
                             <form method="POST" action="{{ route('admin.orders.status', $order->id) }}">
                                 @csrf
                                 <input type="hidden" name="status" value="confirmed">
@@ -379,7 +389,12 @@
 </div>
 @endif
 
+@stack('modals')
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+@if($errors->has('reason') && old('_form') === 'reject_receipt')
+<script>document.addEventListener('DOMContentLoaded', () => { const m = document.getElementById('rejectReceiptModal'); if (m) new bootstrap.Modal(m).show(); });</script>
+@endif
 <script>
 (function () {
     const modal = document.getElementById('flagModal');
@@ -391,7 +406,7 @@
         const radio = modal.querySelector(`input[name="flag"][value="${flag}"]`);
         if (radio) radio.checked = true;
     });
-    @if($errors->has('flag') || $errors->has('reason'))
+    @if(($errors->has('flag') || $errors->has('reason')) && old('_form') !== 'reject_receipt')
         new bootstrap.Modal(modal).show();
     @endif
 })();

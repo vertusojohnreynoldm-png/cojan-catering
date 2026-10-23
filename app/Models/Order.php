@@ -44,6 +44,13 @@ class Order extends Model
         'flagged_by',
         'reserved_utensils',
         'stock_restored_at',
+        'downpayment_amount',
+        'payment_due_at',
+        'downpayment_paid_at',
+        'receipt_path',
+        'receipt_uploaded_at',
+        'receipt_rejected_at',
+        'receipt_rejection_reason',
     ];
 
     protected $casts = [
@@ -52,6 +59,10 @@ class Order extends Model
         'flagged_at' => 'datetime',
         'stock_restored_at' => 'datetime',
         'reserved_utensils' => 'array',
+        'payment_due_at' => 'datetime',
+        'downpayment_paid_at' => 'datetime',
+        'receipt_uploaded_at' => 'datetime',
+        'receipt_rejected_at' => 'datetime',
     ];
 
     public function user()
@@ -126,6 +137,46 @@ class Order extends Model
 
     public const FLAGS = ['no_show' => 'No-show', 'fake' => 'Fake'];
 
+    // ---- Catering downpayment ---------------------------------------------
+
+    /**
+     * "Pending Payment": a catering booking still waiting for its GCash
+     * downpayment to be confirmed. Derived from data — the status enum
+     * stays 'pending'.
+     */
+    public function isAwaitingDownpayment(): bool
+    {
+        return $this->isBooking()
+            && $this->status === 'pending'
+            && $this->payment_due_at !== null
+            && $this->downpayment_paid_at === null;
+    }
+
+    /** A receipt is uploaded and an admin hasn't confirmed or rejected it yet. */
+    public function hasReceiptUnderReview(): bool
+    {
+        return $this->isAwaitingDownpayment()
+            && $this->receipt_path !== null
+            && $this->receipt_rejected_at === null;
+    }
+
+    /** The customer can (re-)upload a receipt only while still Pending Payment. */
+    public function canUploadReceipt(): bool
+    {
+        return $this->isAwaitingDownpayment() && !$this->payment_due_at->isPast();
+    }
+
+    public function requiresDownpayment(): bool
+    {
+        return $this->downpayment_amount !== null;
+    }
+
+    /** What's left to pay on the event day (total minus the downpayment). */
+    public function balanceAmount(): float
+    {
+        return round((float) $this->total_amount - (float) ($this->downpayment_amount ?? 0), 2);
+    }
+
     /**
      * Admin-only marker for a cancelled order an admin flagged as a no-show
      * or a fake booking. Customers only ever see "Cancelled".
@@ -147,6 +198,10 @@ class Order extends Model
      */
     public function statusBadgeClass(?string $status = null): string
     {
+        if ($status === null && $this->isAwaitingDownpayment()) {
+            return $this->hasReceiptUnderReview() ? 'badge-review' : 'badge-payment';
+        }
+
         return match ($status ?? $this->status) {
             'delivered'         => 'badge-delivered',
             'cancelled'         => 'badge-cancelled',
@@ -165,6 +220,13 @@ class Order extends Model
      */
     public function statusLabel(?string $status = null): string
     {
+        // The derived payment sub-states only apply to this order's own,
+        // current status — never to an explicit $status (e.g. the "from"
+        // side of an activity-log entry).
+        if ($status === null && $this->isAwaitingDownpayment()) {
+            return $this->hasReceiptUnderReview() ? 'Payment Under Review' : 'Pending Payment';
+        }
+
         $status = $status ?? $this->status;
 
         if ($this->isBooking() && $status === 'delivered') {

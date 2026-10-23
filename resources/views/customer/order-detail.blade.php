@@ -7,6 +7,8 @@
 <h1 class="cj-page-title">Order Details</h1>
 <p class="cj-page-sub">Order #{{ $order->order_number }}</p>
 
+<x-booking-payment-card :order="$order" :gcash-qr="$gcashQr ?? null" />
+
 <!-- Order Progress -->
 <div class="cj-card mb-3">
     <div class="cj-card-header">Order Progress</div>
@@ -37,9 +39,15 @@
                     <tr>
                         <td style="padding:6px 0;color:var(--text-light);">Payment</td>
                         <td style="padding:6px 0;">
-                            <span class="badge-cj {{ $order->payment_status == 'paid' ? 'badge-delivered' : 'badge-pending' }}">
-                                {{ ucfirst($order->payment_status) }}
-                            </span>
+                            @if($order->payment_status !== 'paid' && $order->requiresDownpayment())
+                                <span class="badge-cj {{ $order->downpayment_paid_at ? 'badge-confirmed' : 'badge-pending' }}">
+                                    {{ $order->downpayment_paid_at ? 'Downpayment paid' : 'Downpayment due' }}
+                                </span>
+                            @else
+                                <span class="badge-cj {{ $order->payment_status == 'paid' ? 'badge-delivered' : 'badge-pending' }}">
+                                    {{ ucfirst($order->payment_status) }}
+                                </span>
+                            @endif
                         </td>
                     </tr>
                     @unless($order->isBooking())

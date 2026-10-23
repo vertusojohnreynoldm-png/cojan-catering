@@ -24,6 +24,7 @@ use App\Http\Controllers\Customer\OrderController;
 use App\Http\Controllers\Delivery\DashboardController as DeliveryDashboard;
 use App\Http\Controllers\ChatController;
 use App\Http\Controllers\ProofPhotoController;
+use App\Http\Controllers\ReceiptController;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -46,6 +47,11 @@ Route::get('/orders/{order}/proof-photo', [ProofPhotoController::class, 'show'])
     ->middleware('auth')
     ->name('orders.proof-photo');
 
+// GCash downpayment receipt — owner or admin only (checked in the controller).
+Route::get('/orders/{order}/receipt', [ReceiptController::class, 'show'])
+    ->middleware('auth')
+    ->name('orders.receipt');
+
 // Admin routes
 Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [AdminDashboard::class, 'index'])->name('dashboard');
@@ -57,6 +63,7 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     Route::post('/orders/{id}/assign', [AdminOrderController::class, 'assignDelivery'])->name('orders.assign');
     Route::post('/orders/{id}/mark-paid', [AdminOrderController::class, 'markPaymentPaid'])->name('orders.mark-paid');
     Route::post('/orders/{id}/flag', [AdminOrderController::class, 'flag'])->name('orders.flag');
+    Route::post('/orders/{id}/reject-receipt', [AdminOrderController::class, 'rejectReceipt'])->name('orders.reject-receipt');
 
     // Catering Bookings (the Avail flow) — separate list, but reuses the
     // Orders detail page/status/mark-paid routes above since those already
@@ -158,6 +165,9 @@ Route::middleware(['auth', 'role:customer'])->prefix('customer')->name('customer
     Route::get('/checkout/delivery-slots', [OrderController::class, 'deliverySlots'])->middleware(['verified', 'not-blocked'])->name('checkout.delivery-slots');
     Route::post('/orders', [OrderController::class, 'store'])->middleware(['verified', 'not-blocked'])->name('orders.store');
     Route::get('/orders/{id}', [OrderController::class, 'show'])->name('orders.show');
+    // Paying for an existing booking is allowed even if the customer was
+    // blocked since — it isn't placing a new order.
+    Route::post('/orders/{id}/receipt', [ReceiptController::class, 'store'])->name('orders.receipt.store');
     Route::post('/orders/{id}/confirm-received', [OrderController::class, 'confirmReceived'])->name('orders.confirm-received');
 
     // Feedback

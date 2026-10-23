@@ -29,12 +29,6 @@
                 <p style="font-size:.78rem;color:var(--text-light);margin-top:.4rem;margin-bottom:0;">
                     No delivery fee for package bookings.
                 </p>
-                <div class="mt-3">
-                    <span id="payment-summary-pill" style="background:var(--green-dark);color:#fff;
-                                 padding:4px 12px;border-radius:20px;font-size:.8rem;">
-                        💵 Cash on Delivery
-                    </span>
-                </div>
                 <hr class="divider">
                 <p style="font-size:.85rem;margin-bottom:.35rem;">
                     <strong>Contact:</strong> {{ $booking['contact_name'] }} · {{ $booking['contact_number'] }}
@@ -51,7 +45,7 @@
     <!-- Payment -->
     <div class="col-12 col-md-7">
         <div class="cj-card">
-            <div class="cj-card-header">Payment</div>
+            <div class="cj-card-header">Downpayment</div>
             <div class="cj-card-body">
                 @if($pendingLimitError && !$errors->has('pending_limit'))
                     <div class="alert-cj alert-warning mb-3" role="status" style="align-items:flex-start;">
@@ -76,11 +70,18 @@
                 <form method="POST" action="{{ route('customer.packages.checkout.store') }}" data-submit-once>
                     @csrf
                     <input type="hidden" name="submission_token" value="{{ $submissionToken }}">
-                    @php $selectedPayment = old('payment_method', 'cash_on_delivery'); @endphp
-                    <x-payment-method-selector
-                        :selected-payment="$selectedPayment"
-                        :total="$total"
-                        :gcash-qr="$gcashQr" />
+                    <x-downpayment-breakdown :total="$total" :downpayment="$downpayment" :balance="$balance"
+                                             :deadline="$paymentDeadline" :percent="$downpaymentPercent" />
+
+                    <ol class="cj-dp-steps">
+                        <li>Confirm your booking — your date is held for you.</li>
+                        <li>Send the <strong>₱{{ number_format($downpayment, 2) }}</strong> downpayment via GCash (we'll show the QR code next).</li>
+                        <li>Upload a screenshot of your GCash receipt <strong>by {{ $paymentDeadline->format('M d, g:i A') }}</strong>.</li>
+                    </ol>
+                    <p class="cj-dp-note">
+                        <i class="bi bi-info-circle"></i>
+                        Bookings without a downpayment by the deadline are cancelled automatically and the date is released.
+                    </p>
 
                     @if($pendingLimitError)
                         <button type="submit" class="btn-cj btn-cj w-100" disabled data-keep-disabled

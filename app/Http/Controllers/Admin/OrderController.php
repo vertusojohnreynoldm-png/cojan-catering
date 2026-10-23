@@ -3,10 +3,13 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\UnpaidBookingExpirer;
 use App\Models\Order;
 use App\Models\User;
 use App\Exceptions\InsufficientStockException;
+use App\Services\ActivityLogger;
 use App\Services\CustomerBlocking;
+use App\Services\Downpayment;
 use App\Services\OrderCancellation;
 use App\Services\OrderNotifier;
 use Illuminate\Http\Request;
@@ -31,6 +34,8 @@ class OrderController extends Controller
 
     public function show($id)
     {
+        UnpaidBookingExpirer::runIfDue(); // lazy expiry — Railway has no scheduler
+
         $order = Order::with('user', 'orderItems.menuItem', 'orderItems.package', 'delivery')->findOrFail($id);
         $deliveryPersonnel = User::where('role', 'delivery')->get();
 
@@ -103,13 +108,86 @@ class OrderController extends Controller
         return redirect()->route('admin.orders.show', $id)->with('success', $message);
     }
 
+    /**
+     * Two steps for a catering booking with a downpayment: the first call
+     * confirms the GCash downpayment (payment_status stays 'unpaid' — the
+     * balance is still due on the event day); the next marks the whole
+     * thing paid. Every other order is marked paid in one step, as before.
+     */
     public function markPaymentPaid($id)
     {
-        $order = Order::findOrFail($id);
+        $order = Order::with('user')->findOrFail($id);
+
+        if ($order->status === 'cancelled') {
+            return redirect()->route('admin.orders.show', $id)
+                ->with('error', 'This order is cancelled — there\'s no payment to record.');
+        }
+
+        if ($order->requiresDownpayment() && $order->downpayment_paid_at === null) {
+            ActivityLogger::withoutLogging(fn () => $order->update(['downpayment_paid_at' => now()]));
+
+            ActivityLogger::log(
+                'booking.downpayment_confirmed',
+                'orders',
+                auth()->user()->name . " confirmed the ₱" . number_format($order->downpayment_amount, 2)
+                    . " downpayment for Booking #{$order->order_number}",
+                subject: $order,
+                changes: ['downpayment_paid_at' => ['old' => null, 'new' => $order->downpayment_paid_at->toDateTimeString()]],
+            );
+            OrderNotifier::sendBookingPayment($order, 'confirmed');
+
+            return redirect()->route('admin.orders.show', $id)->with(
+                'success',
+                'Downpayment confirmed. Balance of ₱' . number_format($order->balanceAmount(), 2) . ' is due on the event day.'
+            );
+        }
+
         $order->update(['payment_status' => 'paid']);
 
         return redirect()->route('admin.orders.show', $id)
             ->with('success', 'Payment marked as paid!');
+    }
+
+    /** The receipt doesn't check out — the customer is asked to upload again. */
+    public function rejectReceipt(Request $request, $id)
+    {
+        $validated = $request->validate([
+            'reason' => 'required|string|max:255',
+        ], [
+            'reason.required' => 'Tell the customer what was wrong so they can fix it.',
+        ]);
+
+        $order = Order::with('user')->findOrFail($id);
+
+        if (!$order->hasReceiptUnderReview()) {
+            return redirect()->route('admin.orders.show', $id)
+                ->with('error', 'There\'s no receipt waiting for review on this booking.');
+        }
+
+        // While a receipt is under review the booking can't expire, so the
+        // deadline may already be behind us — give the customer a fresh
+        // window to re-upload (never past the event start).
+        $newDeadline = Downpayment::deadlineFor($order->event_date);
+        $deadline = $order->payment_due_at->gt($newDeadline) ? $order->payment_due_at : $newDeadline;
+
+        ActivityLogger::withoutLogging(fn () => $order->update([
+            'receipt_rejected_at'      => now(),
+            'receipt_rejection_reason' => trim($validated['reason']),
+            'payment_due_at'           => $deadline,
+        ]));
+
+        ActivityLogger::log(
+            'booking.receipt_rejected',
+            'orders',
+            auth()->user()->name . " rejected the GCash receipt for Booking #{$order->order_number} — " . trim($validated['reason']),
+            subject: $order,
+        );
+        OrderNotifier::sendBookingPayment($order, 'rejected');
+
+        return redirect()->route('admin.orders.show', $id)->with(
+            'success',
+            'Receipt rejected. The customer was emailed and can upload a new one until ' . $deadline->format('M d, g:i A') . '.'
+        );
     }
 
     public function assignDelivery(Request $request, $id)

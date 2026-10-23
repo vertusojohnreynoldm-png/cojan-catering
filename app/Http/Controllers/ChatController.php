@@ -38,6 +38,18 @@ class ChatController extends Controller
     public function customerMessages()
     {
         $admin = $this->getAdmin();
+
+        // No admin account at all (fresh install, or every admin deleted):
+        // an empty, clearly-unavailable chat instead of a 500.
+        if (!$admin) {
+            return response()->json([
+                'messages'    => [],
+                'admin_id'    => null,
+                'admin_name'  => null,
+                'unavailable' => true,
+            ]);
+        }
+
         $messages = Message::where(function ($q) use ($admin) {
             $q->where('sender_id', Auth::id())->where('receiver_id', $admin->id);
         })->orWhere(function ($q) use ($admin) {

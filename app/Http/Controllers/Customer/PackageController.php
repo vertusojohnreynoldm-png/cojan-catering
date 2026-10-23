@@ -12,6 +12,9 @@ use App\Rules\PhilippineMobileNumber;
 use App\Rules\ValidPersonName;
 use App\Services\BookingCapacity;
 use App\Services\BookingSettings;
+use App\Services\Downpayment;
+use App\Services\OrderNotifier;
+use App\Services\UnpaidBookingExpirer;
 use App\Services\OrderSubmissionGuard;
 use App\Services\SubmissionToken;
 use App\Services\PackageStockService;
@@ -32,6 +35,8 @@ class PackageController extends Controller
 {
     public function index()
     {
+        UnpaidBookingExpirer::runIfDue(); // lazy expiry — Railway has no scheduler
+
         $packages = CateringPackage::where('is_available', true)
             ->with('menuItems', 'utensils')
             ->get();
@@ -147,20 +152,19 @@ class PackageController extends Controller
 
         $total = $package->price; // no delivery fee for package bookings
 
-        $gcashQr = null;
-
-        try {
-            $gcashQr = QrCode::size(200)->generate(config('services.gcash.qr_payload'));
-        } catch (Throwable $e) {
-            // Leave $gcashQr null — the shared payment-method-selector component
-            // falls back to a plain-text readout.
-        }
+        // Shown up front so the customer knows exactly what they're agreeing
+        // to; store() recalculates all three from the same rules.
+        $downpayment = Downpayment::amountFor($total);
+        $balance = round($total - $downpayment, 2);
+        $paymentDeadline = Downpayment::deadlineFor(Carbon::parse($booking['event_date']));
+        $downpaymentPercent = Downpayment::percent();
 
         $pendingLimitError = BookingCapacity::pendingLimitError(auth()->id(), true);
         $submissionToken = SubmissionToken::issue('package_checkout');
 
         return view('customer.package-checkout', compact(
-            'package', 'booking', 'total', 'gcashQr', 'pendingLimitError', 'submissionToken'
+            'package', 'booking', 'total', 'downpayment', 'balance', 'paymentDeadline', 'downpaymentPercent',
+            'pendingLimitError', 'submissionToken'
         ));
     }
 
@@ -169,6 +173,8 @@ class PackageController extends Controller
     // a single package rather than a whole cart.
     public function store(Request $request)
     {
+        UnpaidBookingExpirer::runIfDue(); // lazy expiry — Railway has no scheduler
+
         // Duplicate submit, stale page, rate limit, pending limit — first,
         // so a double tap on "Confirm Booking" never books twice.
         if ($redirect = OrderSubmissionGuard::check($request, 'package_checkout', 'customer.packages.checkout', true)) {
@@ -182,10 +188,9 @@ class PackageController extends Controller
                 ->with('error', 'Your booking session expired. Please start again.');
         }
 
-        $request->validate([
-            'payment_method'  => 'required|in:cash_on_delivery,gcash',
-            'gcash_reference' => 'required_if:payment_method,gcash|nullable|string|max:100',
-        ]);
+        // No payment choice to validate any more: the downpayment is always
+        // GCash (paid after this, proven with a receipt upload), and the
+        // balance is settled on the event day.
 
         $package = CateringPackage::where('is_available', true)->with('utensils')->find($booking['package_id']);
 
@@ -210,9 +215,11 @@ class PackageController extends Controller
                     'user_id'          => auth()->id(),
                     'order_number'     => 'ORD-' . strtoupper(Str::random(8)),
                     'status'           => 'pending',
-                    'payment_method'   => $request->payment_method,
-                    'gcash_reference'  => $request->payment_method === 'gcash' ? $request->gcash_reference : null,
+                    'payment_method'   => 'gcash', // the downpayment's method
+                    'gcash_reference'  => null,    // given with the receipt upload
                     'payment_status'   => 'unpaid',
+                    'downpayment_amount' => Downpayment::amountFor($package->price),
+                    'payment_due_at'   => Downpayment::deadlineFor(Carbon::parse($booking['event_date'])),
                     'subtotal'         => $package->price,
                     'delivery_fee'     => 0,
                     'total_amount'     => $package->price,
@@ -280,7 +287,13 @@ class PackageController extends Controller
         session()->forget('package_booking');
         SubmissionToken::forget('package_checkout', $request->submission_token);
 
-        return redirect()->route('customer.orders.show', $order->id)
-            ->with('success', 'Package booked successfully!');
+        OrderNotifier::sendBookingPayment($order, 'received');
+
+        return redirect()->route('customer.orders.show', $order->id)->with(
+            'success',
+            'Booking received! Pay the ₱' . number_format($order->downpayment_amount, 2)
+                . ' downpayment via GCash and upload your receipt by '
+                . $order->payment_due_at->format('M d, g:i A') . ' to secure your date.'
+        );
     }
 }

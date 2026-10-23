@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Mail\BookingPaymentMail;
 use App\Mail\OrderStatusMail;
 use App\Models\Order;
 use Illuminate\Support\Facades\Log;
@@ -33,6 +34,29 @@ class OrderNotifier
         } catch (Throwable $e) {
             Log::error('Failed to send order status email', [
                 'order_id' => $order->id,
+                'error'    => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * Catering downpayment emails: 'received' | 'confirmed' | 'rejected' |
+     * 'expired' (see BookingPaymentMail). Same never-throws contract.
+     */
+    public static function sendBookingPayment(Order $order, string $type): void
+    {
+        $email = $order->user?->email;
+
+        if (!$email || !filter_var($email, FILTER_VALIDATE_EMAIL) || !$order->requiresDownpayment()) {
+            return;
+        }
+
+        try {
+            Mail::to($email)->send(new BookingPaymentMail($order, $type));
+        } catch (Throwable $e) {
+            Log::error('Failed to send booking payment email', [
+                'order_id' => $order->id,
+                'type'     => $type,
                 'error'    => $e->getMessage(),
             ]);
         }

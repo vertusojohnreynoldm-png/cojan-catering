@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\UnpaidBookingExpirer;
 use App\Models\ActivityLog;
 use App\Models\Order;
 use App\Models\User;
@@ -12,6 +13,8 @@ class DashboardController extends Controller
 {
     public function index()
     {
+        UnpaidBookingExpirer::runIfDue(); // lazy expiry — Railway has no scheduler
+
         $totalOrders    = Order::count();
         $pendingOrders  = Order::where('status', 'pending')->count();
         $totalCustomers = User::where('role', 'customer')->count();

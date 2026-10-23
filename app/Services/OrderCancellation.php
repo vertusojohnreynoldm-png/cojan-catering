@@ -106,14 +106,23 @@ class OrderCancellation
                 );
             }
 
-            $order->update([
+            $changes = [
                 'status'              => $newStatus,
                 'flag'                => null,
                 'cancellation_reason' => null,
                 'flagged_at'          => null,
                 'flagged_by'          => null,
                 'stock_restored_at'   => null,
-            ]);
+            ];
+
+            // A booking reopened while its downpayment is still unpaid gets a
+            // fresh deadline — otherwise the old, past one would expire it
+            // again on the very next check.
+            if ($locked->downpayment_amount !== null && $locked->downpayment_paid_at === null && $locked->event_date) {
+                $changes['payment_due_at'] = Downpayment::deadlineFor($locked->event_date);
+            }
+
+            $order->update($changes);
         });
     }
 

@@ -26,6 +26,13 @@
                 <p style="margin:0 0 6px;font-size:14px;">{{ $item->displayName() }} x{{ $item->quantity }} — &#8369;{{ number_format($item->subtotal, 2) }}</p>
             @endforeach
             <p style="margin:10px 0 0;font-weight:bold;color:#7A2E1D;">Total: &#8369;{{ number_format($order->total_amount, 2) }}</p>
+            @if($order->requiresDownpayment())
+                <p style="margin:6px 0 0;font-size:14px;">
+                    Downpayment (GCash): &#8369;{{ number_format($order->downpayment_amount, 2) }}
+                    — {{ $order->downpayment_paid_at ? 'paid' : 'due by ' . $order->payment_due_at->format('M d, Y g:i A') }}
+                </p>
+                <p style="margin:4px 0 0;font-size:14px;">Balance on the event day: &#8369;{{ number_format($order->balanceAmount(), 2) }}</p>
+            @endif
         </td>
     </tr>
 </table>

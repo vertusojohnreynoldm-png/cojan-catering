@@ -540,8 +540,19 @@ function loadCustomerMessages() {
         .then(r => r.json())
         .then(data => {
             adminId = data.admin_id;
+            if (!adminId) {
+                // No admin account exists yet — nothing to subscribe to.
+                document.getElementById('chat-messages').innerHTML =
+                    '<div style="text-align:center;color:var(--text-muted);font-size:.82rem;margin-top:30px;">Chat is unavailable right now.<br>Please try again later.</div>';
+                document.getElementById('chat-input').disabled = true;
+                return;
+            }
             renderMessages(data.messages);
             subscribeToChannel(CUSTOMER_ID, adminId);
+        })
+        .catch(() => {
+            document.getElementById('chat-messages').innerHTML =
+                '<div style="text-align:center;color:var(--text-muted);font-size:.82rem;margin-top:30px;">Couldn\'t load messages — check your connection.</div>';
         });
 }
 

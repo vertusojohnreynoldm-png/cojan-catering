@@ -41,6 +41,16 @@ class BookingSettings
             'label' => 'Maximum advance booking (months)',
             'help' => 'How far into the future a catering event can be booked.',
         ],
+        'catering_downpayment_percent' => [
+            'default' => 50, 'min' => 10, 'max' => 100,
+            'label' => 'Catering downpayment (%)',
+            'help' => 'Share of the package price paid upfront via GCash to secure the date. The rest is paid on the event day.',
+        ],
+        'payment_deadline_hours' => [
+            'default' => 24, 'min' => 1, 'max' => 168,
+            'label' => 'Downpayment deadline (hours)',
+            'help' => 'Unpaid bookings are cancelled automatically after this many hours — or at the event start, if that comes first. A receipt waiting for review is never cancelled.',
+        ],
         'max_pending_catering_bookings' => [
             'default' => 2, 'min' => 1, 'max' => 20,
             'label' => 'Max pending catering bookings per customer',

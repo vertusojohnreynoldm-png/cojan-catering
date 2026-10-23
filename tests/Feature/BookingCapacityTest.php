@@ -153,6 +153,8 @@ class BookingCapacityTest extends TestCase
             'catering_max_advance_months'  => 12,
             'max_pending_catering_bookings' => 2,
             'max_pending_menu_orders'      => 3,
+            'catering_downpayment_percent' => 50,
+            'payment_deadline_hours'       => 24,
         ])->assertRedirect(route('admin.booking-rules'));
 
         $this->assertSame(5, BookingSettings::get('max_catering_events_per_date'));
@@ -172,6 +174,8 @@ class BookingCapacityTest extends TestCase
             'catering_max_advance_months'  => 6,
             'max_pending_catering_bookings' => 2,
             'max_pending_menu_orders'      => 3,
+            'catering_downpayment_percent' => 50,
+            'payment_deadline_hours'       => 24,
         ])->assertSessionHasErrors('max_catering_events_per_date');
 
         $this->assertSame(3, BookingSettings::get('max_catering_events_per_date'));
