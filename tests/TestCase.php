@@ -27,6 +27,13 @@ abstract class TestCase extends BaseTestCase
             $data['submission_token'] = SubmissionToken::issue(self::TOKEN_FORMS[$uri]);
         }
 
+        // Menu checkout requires a map pin; tests that aren't about the pin
+        // get San Jose's town centre. Tests about the pin pass 'latitude'
+        // explicitly (even '') and are left as given.
+        if ($uri === '/customer/orders' && !array_key_exists('latitude', $data)) {
+            [$data['latitude'], $data['longitude']] = \App\Services\DeliveryLocation::townCenter();
+        }
+
         return parent::post($uri, $data, $headers);
     }
 }

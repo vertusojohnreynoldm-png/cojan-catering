@@ -13,6 +13,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\ActivityLogger;
 use App\Services\BookingCapacity;
+use App\Services\DeliveryLocation;
 use App\Services\OrderSubmissionGuard;
 use App\Services\SubmissionToken;
 use App\Services\BusinessHours;
@@ -97,10 +98,19 @@ class OrderController extends Controller
         $pendingLimitError = BookingCapacity::pendingLimitError(auth()->id(), false);
         $submissionToken = SubmissionToken::issue('checkout');
 
+        // Delivery-pin map (menu carts only): the San Jose box, barangay
+        // centres from the static data file, and the customer's saved pin.
+        $user = auth()->user();
+        $pinMap = $hasMenuItems ? DeliveryLocation::checkoutMapConfig() + [
+            'saved' => $user->default_latitude !== null
+                ? [(float) $user->default_latitude, (float) $user->default_longitude]
+                : null,
+        ] : null;
+
         return view('customer.checkout', compact(
             'cart', 'total', 'gcashQr', 'minDeliveryDate', 'maxDeliveryDate',
             'hasMenuItems', 'sanJoseBarangays', 'cateringAreas',
-            'blockedDeliveryDates', 'todayBlockedReason', 'pendingLimitError', 'submissionToken'
+            'blockedDeliveryDates', 'todayBlockedReason', 'pendingLimitError', 'submissionToken', 'pinMap'
         ));
     }
 
@@ -179,6 +189,27 @@ class OrderController extends Controller
             );
         }
 
+        // Map pin — required for any cart with menu items (the rider
+        // navigates to it). A package-only cart is a catering-style order
+        // and has no pin. The bounding box is a rough sanity check only;
+        // the barangay rule just below stays the real service-area check.
+        if ($hasMenuItems) {
+            $request->validate([
+                'latitude'      => ['required', 'numeric', 'between:-90,90'],
+                'longitude'     => ['required', 'numeric', 'between:-180,180'],
+                'save_location' => ['nullable', 'boolean'],
+            ], [
+                'latitude.required'  => 'Please set your delivery location on the map — drag the pin or tap "Use my current location".',
+                'longitude.required' => 'Please set your delivery location on the map — drag the pin or tap "Use my current location".',
+            ]);
+
+            if (!DeliveryLocation::isInsideMenuArea((float) $request->latitude, (float) $request->longitude)) {
+                return back()->withInput()->withErrors([
+                    'latitude' => 'That map pin is outside San Jose, Occidental Mindoro — please move it to your delivery address.',
+                ]);
+            }
+        }
+
         // Service-area gate — a mixed cart (menu items + packages together)
         // is still ONE order with ONE delivery address, so it can only go
         // out if that address satisfies the stricter of the two rules. A
@@ -248,7 +279,7 @@ class OrderController extends Controller
 
         try {
             $order = DB::transaction(function () use (
-                $request, $cart, $subtotal, $deliveryFee, $total, $requestedDeliveryAt, $deliveryWindowLabel
+                $request, $cart, $subtotal, $deliveryFee, $total, $requestedDeliveryAt, $deliveryWindowLabel, $hasMenuItems
             ) {
                 // First, so a blocked day / full time frame aborts before any
                 // stock is touched — and the slot's row lock is held until
@@ -298,6 +329,8 @@ class OrderController extends Controller
                     'delivery_type'    => $request->delivery_type,
                     'requested_delivery_at'  => $requestedDeliveryAt,
                     'delivery_window_label'  => $deliveryWindowLabel,
+                    'latitude'         => $hasMenuItems ? round((float) $request->latitude, 7) : null,
+                    'longitude'        => $hasMenuItems ? round((float) $request->longitude, 7) : null,
                     'idempotency_key'  => $request->submission_token,
                     'reserved_utensils' => $reservedUtensils ?: null,
                 ]);
@@ -361,6 +394,15 @@ class OrderController extends Controller
 
         session()->forget('cart');
         SubmissionToken::forget('checkout', $request->submission_token);
+
+        // "Save as my default location" (on by default) — pre-fills the pin
+        // next time. Quiet: a pin move isn't worth an activity-log entry.
+        if ($hasMenuItems && $request->boolean('save_location')) {
+            ActivityLogger::withoutLogging(fn () => $request->user()->update([
+                'default_latitude'  => $order->latitude,
+                'default_longitude' => $order->longitude,
+            ]));
+        }
 
         return redirect()->route('customer.orders.show', $order->id)
             ->with('success', 'Order placed successfully!');

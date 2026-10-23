@@ -164,6 +164,9 @@
                         <input type="text" name="landmark" placeholder="e.g. near the barangay hall"
                                value="{{ old('landmark', auth()->user()->landmark) }}" class="cj-input">
                     </div>
+                    @if($pinMap)
+                        <x-delivery-pin-map :config="$pinMap" />
+                    @endif
                     <div class="mb-3">
                         <label class="cj-label">Contact Number <span style="color:var(--required);">*</span></label>
                         <input type="tel" name="delivery_phone" id="delivery-phone" required inputmode="numeric"

@@ -768,7 +768,10 @@ checkUnread();
     document.body.appendChild(zone);
 
     const AVOID = 'a, button, input, select, textarea, label, img, svg, canvas, video, iframe, '
-        + '.alert-cj, .cj-dp, .badge-cj, .slot-chip, .flatpickr-calendar, .modal, .cj-toast, [data-chat-avoid]';
+        + '.alert-cj, .cj-dp, .badge-cj, .slot-chip, .flatpickr-calendar, .modal, .cj-toast, [data-chat-avoid], '
+        // Leaflet maps: tiles are pointer-events:none, so the hit-test lands
+        // on the empty-looking container — treat the whole map as content.
+        + '.leaflet-container';
     const isPhone = () => window.matchMedia('(max-width: 768px)').matches;
     const isPageField = (el) => el && el.matches && el.matches('input, textarea, select') && !el.closest('#chat-window');
     let typing = false;

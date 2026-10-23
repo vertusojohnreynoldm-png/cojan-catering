@@ -35,6 +35,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'blocked_at',
         'blocked_reason',
         'blocked_by',
+        'default_latitude',
+        'default_longitude',
     ];
 
     protected $hidden = [

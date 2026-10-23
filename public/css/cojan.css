@@ -1106,3 +1106,47 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
 .cj-admin-receipt { display: flex; gap: var(--space-3); align-items: flex-start; }
 .cj-admin-receipt-thumb { flex: 0 0 96px; }
 .cj-admin-receipt-thumb img { width: 96px; height: 128px; object-fit: cover; border-radius: var(--radius-sm); border: 1px solid rgba(122,46,29,.15); background: #f6f6f6; }
+
+/* ── DELIVERY PIN MAP (menu checkout) ── */
+.cj-pin-help { font-size: var(--fs-xs); color: var(--text-light); margin: 0 0 .5rem; }
+.cj-pin-map {
+  height: 260px;
+  border-radius: var(--radius-base);
+  border: 1.5px solid rgba(122,46,29,.2);
+  z-index: 0; /* keep Leaflet's panes under the sticky nav and modals */
+}
+.cj-pin-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem .75rem; margin-top: .6rem; }
+.cj-pin-status { font-size: var(--fs-xs); color: var(--text-light); }
+.cj-pin-status.set { color: var(--status-green-text); font-weight: 600; }
+.cj-pin-save { display: flex; align-items: center; gap: .5rem; margin-top: .6rem; font-size: var(--fs-sm); cursor: pointer; min-height: 44px; }
+.cj-pin-save input { width: 20px; height: 20px; accent-color: var(--green-dark); }
+/* Teardrop pin in the Cojan terracotta; faded until the customer places it. */
+.cj-pin-icon span {
+  position: relative;
+  display: block;
+  width: 34px;
+  height: 34px;
+  border-radius: 50% 50% 50% 0;
+  background: #C1441E;
+  border: 3px solid #fff;
+  box-shadow: 0 2px 8px rgba(0,0,0,.35);
+  transform: rotate(-45deg);
+  margin: 0 auto;
+}
+.cj-pin-icon span::after {
+  content: '';
+  position: absolute;
+  inset: 9px;
+  border-radius: 50%;
+  background: #fff;
+}
+.cj-pin-icon.cj-pin-unset span { opacity: .55; background: #9a9a9a; }
+@media (max-width: 768px) {
+  .cj-pin-map { height: 240px; }
+  .cj-pin-actions .btn-cj { width: 100%; justify-content: center; }
+}
+
+/* ── TEMPORARY: admin dashboard PHP version check (Oct 2026 security release) ── */
+.cj-php-version { display: inline-flex; align-items: center; gap: .4rem; font-size: var(--fs-xs); padding: .3rem .7rem; border-radius: var(--radius-sm); margin: -.75rem 0 1rem; }
+.cj-php-version.ok  { background: var(--status-green-bg); color: var(--status-green-text); }
+.cj-php-version.bad { background: var(--status-red-bg); color: var(--status-red-text); font-weight: 700; }

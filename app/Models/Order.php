@@ -51,6 +51,8 @@ class Order extends Model
         'receipt_uploaded_at',
         'receipt_rejected_at',
         'receipt_rejection_reason',
+        'latitude',
+        'longitude',
     ];
 
     protected $casts = [
