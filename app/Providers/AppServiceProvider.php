@@ -9,7 +9,10 @@ use Illuminate\Auth\Events\Logout;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Auth\Events\Registered;
 use Illuminate\Auth\Events\Verified;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\URL;
@@ -30,6 +33,16 @@ class AppServiceProvider extends ServiceProvider
         if (app()->environment('production')) {
             URL::forceScheme('https');
         }
+
+        // Route endpoint (rider map, and the customer tracking page in Stage
+        // D): the page normally asks at most once a minute (or after going
+        // ~50 m off-route), so 12/min per user is generous for real use but
+        // stops a runaway loop from hammering the free routing providers.
+        RateLimiter::for('routing', fn (Request $request) => Limit::perMinute(12)
+            ->by('routing:' . ($request->user()?->id ?? $request->ip()))
+            ->response(fn () => response()->json([
+                'message' => 'Too many route requests — the current route stays on the map; it refreshes again shortly.',
+            ], 429)));
 
         // A 10s client timeout keeps a slow Brevo API from ever hanging
         // registration or an order-status update.

@@ -52,6 +52,22 @@ class Delivery extends Model
         return $this->belongsTo(Order::class);
     }
 
+    /**
+     * True while the assigned rider may see the customer's location and
+     * route to it: a MENU order (catering bookings never get the rider map),
+     * the delivery not yet finished, and the order not cancelled/delivered.
+     * Once this is false the coordinates are neither rendered nor served.
+     */
+    public function navigationActive(): bool
+    {
+        $order = $this->order;
+
+        return $order !== null
+            && !$order->isBooking()
+            && in_array($this->status, ['assigned', 'picked_up', 'in_transit'], true)
+            && !in_array($order->status, ['cancelled', 'delivered'], true);
+    }
+
     public function personnel()
     {
         return $this->belongsTo(User::class, 'user_id');

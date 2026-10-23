@@ -10,6 +10,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/cojan.css') }}">
+    @if($deliveryPin)
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    @endif
 </head>
 <body>
 <x-admin-nav />
@@ -115,6 +118,20 @@
                         @endif
                         {{ $order->delivery_address }}
                     </p>
+                    @if($deliveryPin)
+                        {{-- Menu orders only: the customer's pin (admins can always see it). --}}
+                        <div class="cj-admin-pin mb-3">
+                            <div id="admin-pin-map" class="cj-admin-pin-map" role="img"
+                                 aria-label="Customer delivery location on the map"></div>
+                            <p class="mb-0 mt-1" style="font-size:var(--fs-xs);">
+                                <a href="https://www.google.com/maps/search/?api=1&query={{ sprintf('%.7F,%.7F', $deliveryPin['lat'], $deliveryPin['lng']) }}"
+                                   target="_blank" rel="noopener">Open in Google Maps <i class="bi bi-box-arrow-up-right"></i></a>
+                                @if($deliveryPin['approximate'])
+                                    · <span style="color:var(--status-amber-text);">Location approximate (no pin — barangay centre)</span>
+                                @endif
+                            </p>
+                        </div>
+                    @endif
                     @unless($order->isBooking())
                         <p>
                             <strong>Delivery Time:</strong> {{ $order->deliveryTimeLabel() }}
@@ -390,6 +407,20 @@
 @endif
 
 @stack('modals')
+
+@if($deliveryPin)
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+    if (!window.L) return;
+    const pin = [{{ $deliveryPin['lat'] }}, {{ $deliveryPin['lng'] }}];
+    const map = L.map('admin-pin-map', { scrollWheelZoom: false, dragging: !window.matchMedia('(pointer: coarse)').matches })
+        .setView(pin, {{ $deliveryPin['approximate'] ? 15 : 17 }});
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
+    L.marker(pin, { icon: L.divIcon({ className: 'cj-pin-icon', html: '<span></span>', iconSize: [34, 44], iconAnchor: [17, 42] }) }).addTo(map);
+})();
+</script>
+@endif
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 @if($errors->has('reason') && old('_form') === 'reject_receipt')

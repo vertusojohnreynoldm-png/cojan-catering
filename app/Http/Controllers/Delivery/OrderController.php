@@ -6,7 +6,9 @@ use App\Events\DeliveryLocationUpdated;
 use App\Http\Controllers\Controller;
 use App\Models\Delivery;
 use App\Models\Order;
+use App\Services\DeliveryLocation;
 use App\Services\OrderNotifier;
+use App\Services\RouteService;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
@@ -17,7 +19,47 @@ class OrderController extends Controller
             ->with('order.user', 'order.orderItems.menuItem', 'order.orderItems.package')
             ->findOrFail($id);
 
-        return view('delivery.order-detail', compact('delivery'));
+        // Navigation (map, route, Navigate/Waze, call) — menu orders only,
+        // and only while the delivery is active. Otherwise the customer's
+        // coordinates never reach the page at all.
+        $nav = null;
+        if ($delivery->navigationActive()) {
+            $order = $delivery->order;
+            $dest = DeliveryLocation::forOrder($order);
+            $latLng = sprintf('%.7F,%.7F', $dest['lat'], $dest['lng']);
+            $nav = $dest + [
+                'google' => 'https://www.google.com/maps/dir/?api=1&destination=' . $latLng . '&travelmode=driving',
+                'waze'   => 'https://waze.com/ul?ll=' . $latLng . '&navigate=yes',
+                'tel'    => 'tel:' . preg_replace('/[^0-9+]/', '', (string) $order->delivery_phone),
+            ];
+        }
+
+        return view('delivery.order-detail', compact('delivery', 'nav'));
+    }
+
+    /**
+     * Road route from the rider's CURRENT position (sent by the assigned
+     * rider's own page) to the order's pin. Rider-only, active menu
+     * deliveries only, rate-limited (throttle:routing). The destination is
+     * always taken from the order on the server — never from the request.
+     */
+    public function route(Request $request, $id)
+    {
+        $request->validate([
+            'lat' => 'required|numeric|between:-90,90',
+            'lng' => 'required|numeric|between:-180,180',
+        ]);
+
+        $delivery = Delivery::where('user_id', auth()->id())->with('order')->findOrFail($id);
+
+        if (!$delivery->navigationActive()) {
+            return response()->json(['message' => 'Navigation is only available while this delivery is active.'], 403);
+        }
+
+        $dest = DeliveryLocation::forOrder($delivery->order);
+        $route = RouteService::route([(float) $request->lat, (float) $request->lng], [$dest['lat'], $dest['lng']]);
+
+        return response()->json($route + ['destination' => $dest]);
     }
 
     public function updateStatus(Request $request, $id)

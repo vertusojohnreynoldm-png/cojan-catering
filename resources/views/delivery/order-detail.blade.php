@@ -11,6 +11,9 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/cojan.css') }}">
+    @if($nav)
+        <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    @endif
 </head>
 <body>
 <nav class="cj-nav">
@@ -25,6 +28,49 @@
 <div class="cj-page">
     <h1 class="cj-page-title">Delivery Detail</h1>
     <p class="cj-page-sub">Order #{{ $delivery->order->order_number }}</p>
+
+    @if($nav)
+        {{-- Rider navigation — menu orders only, active deliveries only
+             ($nav is null otherwise, so the customer's location never
+             reaches this page). Phone-first: big map, big Navigate. --}}
+        <section class="cj-card cj-rider-nav mb-3" aria-label="Navigation to the customer">
+            <div id="rider-map" class="cj-rider-map" role="application" aria-label="Map with your position, the customer's location and the route"></div>
+            <div class="cj-card-body">
+                <div class="cj-route-summary" id="route-summary" aria-live="polite">
+                    <span class="cj-route-figure"><i class="bi bi-signpost-split"></i> <strong id="route-distance">—</strong></span>
+                    <span class="cj-route-figure"><i class="bi bi-clock"></i> <strong id="route-eta">—</strong></span>
+                    <span class="cj-route-note" id="route-note">Finding your location…</span>
+                </div>
+
+                <a href="{{ $nav['google'] }}" target="_blank" rel="noopener" class="cj-navigate-btn">
+                    <i class="bi bi-cursor-fill" aria-hidden="true"></i> Navigate
+                    <small>Google Maps</small>
+                </a>
+                <div class="cj-nav-secondary">
+                    <a href="{{ $nav['waze'] }}" target="_blank" rel="noopener" class="btn-cj cj-nav-alt">
+                        <i class="bi bi-sign-turn-right" aria-hidden="true"></i> Waze
+                    </a>
+                    <a href="{{ $nav['tel'] }}" class="btn-cj cj-nav-alt cj-nav-call">
+                        <i class="bi bi-telephone-fill" aria-hidden="true"></i> Call {{ \Illuminate\Support\Str::of($delivery->order->contact_name ?: $delivery->order->user->name)->before(' ') }}
+                    </a>
+                </div>
+
+                <div class="cj-nav-dest">
+                    <p class="mb-1"><strong>{{ $delivery->order->contact_name ?: $delivery->order->user->name }}</strong> · <a href="{{ $nav['tel'] }}">{{ $delivery->order->delivery_phone }}</a></p>
+                    <p class="mb-1">{{ $delivery->order->street }}@if($delivery->order->barangay), {{ $delivery->order->barangay }}@endif</p>
+                    @if($delivery->order->landmark)
+                        <p class="mb-1"><i class="bi bi-geo"></i> Landmark: {{ $delivery->order->landmark }}</p>
+                    @endif
+                    @if($nav['approximate'])
+                        <p class="cj-nav-approx mb-0" role="note">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            Location approximate — this order has no map pin, so this is the barangay centre. Call the customer to confirm the exact spot.
+                        </p>
+                    @endif
+                </div>
+            </div>
+        </section>
+    @endif
 
     <div class="row g-3">
         <!-- Customer Info -->
@@ -505,6 +551,145 @@
             requestWakeLock();
         }
     });
+})();
+</script>
+@endif
+
+@if($nav)
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* Rider navigation map. The customer's pin comes from the server-rendered
+   $nav (only present for an active menu delivery); the road route comes
+   from GET /delivery/orders/{id}/route, which the server computes from the
+   rider's position sent here and the order's pin (never from this page).
+   Re-routes only after drifting ~50 m off the drawn line or every 60 s. */
+(function () {
+    const ROUTE_URL = @json(route('delivery.orders.route', $delivery->id));
+    const dest = [{{ $nav['lat'] }}, {{ $nav['lng'] }}];
+    const OFF_ROUTE_M = 50;
+    const REFRESH_MS = 60000;
+    const distEl = document.getElementById('route-distance');
+    const etaEl = document.getElementById('route-eta');
+    const noteEl = document.getElementById('route-note');
+    const mapEl = document.getElementById('rider-map');
+
+    if (!window.L) {
+        mapEl.style.display = 'none';
+        noteEl.textContent = 'The map could not load — use the Navigate button.';
+        return;
+    }
+
+    const map = L.map(mapEl, { zoomControl: true, scrollWheelZoom: false }).setView(dest, 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors', maxZoom: 19,
+    }).addTo(map);
+
+    L.marker(dest, {
+        icon: L.divIcon({ className: 'cj-pin-icon', html: '<span></span>', iconSize: [34, 44], iconAnchor: [17, 42] }),
+        title: 'Customer location',
+    }).addTo(map);
+
+    let riderMarker = null;
+    let accuracyCircle = null;
+    let routeLine = null;
+    let routePoints = [];
+    let lastRouteAt = 0;
+    let inFlight = false;
+    let fitted = false;
+    let blockedUntil = 0;
+
+    const fmtDistance = (m) => m >= 1000 ? (m / 1000).toFixed(m >= 10000 ? 0 : 1) + ' km' : Math.round(m / 10) * 10 + ' m';
+    const fmtEta = (s) => s < 60 ? '< 1 min' : (s < 3600 ? Math.round(s / 60) + ' min' : Math.floor(s / 3600) + ' h ' + Math.round((s % 3600) / 60) + ' min');
+
+    // Metres from point p to the drawn route (equirectangular — plenty
+    // accurate over a few km).
+    function distanceToRoute(p) {
+        if (routePoints.length < 2) return Infinity;
+        const k = 111320, cos = Math.cos(p[0] * Math.PI / 180);
+        const xy = (q) => [(q[1] - p[1]) * k * cos, (q[0] - p[0]) * k];
+        let best = Infinity;
+        for (let i = 1; i < routePoints.length; i++) {
+            const [ax, ay] = xy(routePoints[i - 1]), [bx, by] = xy(routePoints[i]);
+            const dx = bx - ax, dy = by - ay, len = dx * dx + dy * dy;
+            const t = len ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len)) : 0;
+            best = Math.min(best, Math.hypot(ax + t * dx, ay + t * dy));
+        }
+        return best;
+    }
+
+    function drawRoute(data) {
+        routePoints = data.geometry;
+        if (routeLine) map.removeLayer(routeLine);
+        routeLine = L.polyline(routePoints, data.fallback
+            ? { color: '#C1441E', weight: 4, opacity: .8, dashArray: '8 10' }
+            : { color: '#C1441E', weight: 6, opacity: .85 }).addTo(map);
+        distEl.textContent = fmtDistance(data.distance_m);
+        etaEl.textContent = (data.fallback ? '~' : '') + fmtEta(data.duration_s);
+        noteEl.textContent = data.fallback
+            ? 'Road route unavailable — straight-line distance shown. Use Navigate for turn-by-turn.'
+            : 'Road route · updates as you move';
+        noteEl.classList.toggle('warn', !!data.fallback);
+        if (!fitted) {
+            map.fitBounds(L.latLngBounds(routePoints).pad(0.15));
+            fitted = true;
+        }
+    }
+
+    async function requestRoute(pos) {
+        if (inFlight || Date.now() < blockedUntil) return;
+        inFlight = true;
+        lastRouteAt = Date.now();
+        try {
+            const resp = await fetch(`${ROUTE_URL}?lat=${pos[0]}&lng=${pos[1]}`, { headers: { 'Accept': 'application/json' } });
+            if (resp.status === 429) {
+                blockedUntil = Date.now() + REFRESH_MS; // keep the current route; try again later
+            } else if (resp.status === 403) {
+                noteEl.textContent = 'This delivery is no longer active — navigation is off.';
+                blockedUntil = Infinity;
+            } else if (resp.ok) {
+                drawRoute(await resp.json());
+            }
+        } catch (e) {
+            noteEl.textContent = 'No connection — showing the last route. Navigate still works.';
+        } finally {
+            inFlight = false;
+        }
+    }
+
+    function onPosition(p) {
+        const pos = [p.coords.latitude, p.coords.longitude];
+        if (!riderMarker) {
+            riderMarker = L.marker(pos, {
+                icon: L.divIcon({ className: 'cj-rider-dot', html: '<span></span>', iconSize: [22, 22], iconAnchor: [11, 11] }),
+                title: 'You', zIndexOffset: 1000,
+            }).addTo(map);
+            accuracyCircle = L.circle(pos, { radius: p.coords.accuracy || 0, color: '#2563eb', weight: 1, fillOpacity: .08 }).addTo(map);
+        } else {
+            riderMarker.setLatLng(pos);
+            accuracyCircle.setLatLng(pos).setRadius(p.coords.accuracy || 0);
+        }
+
+        if (!routeLine || Date.now() - lastRouteAt > REFRESH_MS || distanceToRoute(pos) > OFF_ROUTE_M) {
+            requestRoute(pos);
+        }
+    }
+
+    function onError(err) {
+        noteEl.classList.add('warn');
+        noteEl.textContent = !window.isSecureContext
+            ? 'Location needs a secure (https) page — the customer\'s pin is shown; use Navigate for directions.'
+            : (err && err.code === 1
+                ? 'Location is blocked — allow it (tap the lock/ⓘ in the address bar → Location → Allow) to see your route. Navigate still works.'
+                : 'Can\'t get your location — turn on GPS/Location to see your route. Navigate still works.');
+    }
+
+    if (!navigator.geolocation || !window.isSecureContext) {
+        onError(null);
+    } else {
+        navigator.geolocation.watchPosition(onPosition, onError, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+    }
+
+    setTimeout(() => map.invalidateSize(), 200);
 })();
 </script>
 @endif

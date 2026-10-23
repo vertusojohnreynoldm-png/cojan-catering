@@ -1150,3 +1150,56 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
 .cj-php-version { display: inline-flex; align-items: center; gap: .4rem; font-size: var(--fs-xs); padding: .3rem .7rem; border-radius: var(--radius-sm); margin: -.75rem 0 1rem; }
 .cj-php-version.ok  { background: var(--status-green-bg); color: var(--status-green-text); }
 .cj-php-version.bad { background: var(--status-red-bg); color: var(--status-red-text); font-weight: 700; }
+
+/* ── RIDER NAVIGATION (menu-order deliveries) ──
+   Phone-first: the map takes most of the first screen and Navigate is a
+   full-width 56px button reachable with a thumb. */
+.cj-rider-nav { overflow: hidden; }
+.cj-rider-map { height: 420px; z-index: 0; }
+.cj-route-summary { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem 1rem; margin-bottom: var(--space-3); }
+.cj-route-figure { font-size: var(--fs-md); color: var(--green-dark); }
+.cj-route-figure .bi { color: var(--text-light); margin-right: .15rem; }
+.cj-route-note { flex: 1 1 100%; font-size: var(--fs-xs); color: var(--text-light); }
+.cj-route-note.warn { color: var(--status-amber-text); font-weight: 600; }
+.cj-navigate-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .5rem;
+  width: 100%;
+  min-height: 56px;
+  padding: .6rem 1rem;
+  border-radius: var(--radius-base);
+  background: #C1441E;
+  color: #fff !important;
+  font-size: var(--fs-md);
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: var(--shadow-sm);
+}
+.cj-navigate-btn small { font-weight: 400; font-size: var(--fs-xs); opacity: .85; }
+.cj-navigate-btn:hover, .cj-navigate-btn:focus-visible { background: #a83a19; }
+.cj-navigate-btn:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+.cj-nav-secondary { display: flex; gap: var(--space-2); margin-top: var(--space-2); }
+.cj-nav-alt {
+  flex: 1 1 0;
+  justify-content: center;
+  min-height: 48px;
+  background: transparent !important;
+  color: var(--green-dark) !important;
+  border-color: var(--green-dark) !important;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cj-nav-call { color: var(--status-green-text) !important; border-color: var(--status-green-text) !important; }
+.cj-nav-dest { margin-top: var(--space-3); font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.cj-nav-approx { color: var(--status-amber-text); background: var(--status-amber-bg); border-radius: var(--radius-sm); padding: .5rem .65rem; font-size: var(--fs-xs); }
+/* The rider: a blue dot with a white ring. */
+.cj-rider-dot span { display: block; width: 22px; height: 22px; border-radius: 50%; background: #2563eb; border: 4px solid #fff; box-shadow: 0 0 0 2px rgba(37,99,235,.35), 0 2px 6px rgba(0,0,0,.3); }
+@media (max-width: 768px) {
+  /* ~46% of the screen: map + distance/ETA + Navigate all fit above the fold on a 360–390px phone. */
+  .cj-rider-map { height: 46vh; height: 46dvh; min-height: 260px; }
+  .cj-rider-nav .cj-card-body { padding: var(--space-3); }
+}
+.cj-admin-pin-map { height: 200px; border-radius: var(--radius-base); border: 1px solid rgba(122,46,29,.15); z-index: 0; }

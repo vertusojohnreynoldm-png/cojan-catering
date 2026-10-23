@@ -45,4 +45,14 @@ return [
         'qr_payload' => env('GCASH_QR_PAYLOAD'),
     ],
 
+    // Road routing for the rider map (App\Services\RouteService). Both
+    // providers are free with no billing. ORS is used when ORS_API_KEY is
+    // set; otherwise (or if ORS fails) the public OSRM server. If both fail
+    // the map shows a straight dashed line with the as-the-crow-flies distance.
+    'routing' => [
+        'provider' => env('ROUTING_PROVIDER', 'auto'), // auto | ors | osrm
+        'ors_key'  => env('ORS_API_KEY'),
+        'osrm_url' => env('OSRM_URL', 'https://router.project-osrm.org'),
+    ],
+
 ];

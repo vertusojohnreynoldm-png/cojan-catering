@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Exceptions\InsufficientStockException;
 use App\Services\ActivityLogger;
 use App\Services\CustomerBlocking;
+use App\Services\DeliveryLocation;
 use App\Services\Downpayment;
 use App\Services\OrderCancellation;
 use App\Services\OrderNotifier;
@@ -39,7 +40,10 @@ class OrderController extends Controller
         $order = Order::with('user', 'orderItems.menuItem', 'orderItems.package', 'delivery')->findOrFail($id);
         $deliveryPersonnel = User::where('role', 'delivery')->get();
 
-        return view('admin.order-detail', compact('order', 'deliveryPersonnel'));
+        // Customer's map pin — menu orders only (bookings have no pin).
+        $deliveryPin = $order->isBooking() ? null : DeliveryLocation::forOrder($order);
+
+        return view('admin.order-detail', compact('order', 'deliveryPersonnel', 'deliveryPin'));
     }
 
     public function updateStatus(Request $request, $id)

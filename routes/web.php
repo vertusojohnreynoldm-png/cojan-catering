@@ -196,6 +196,8 @@ Route::middleware(['auth', 'role:delivery'])->prefix('delivery')->name('delivery
     Route::get('/orders/{id}', [DeliveryOrderController::class, 'show'])->name('orders.show');
     Route::post('/orders/{id}/status', [DeliveryOrderController::class, 'updateStatus'])->name('orders.status');
     Route::post('/orders/{id}/location', [DeliveryOrderController::class, 'updateLocation'])->name('orders.location');
+    // Road route to the customer's pin — rate-limited per rider (AppServiceProvider).
+    Route::get('/orders/{id}/route', [DeliveryOrderController::class, 'route'])->middleware('throttle:routing')->name('orders.route');
     Route::post('/scan', [DeliveryOrderController::class, 'scan'])->name('scan');
 });
 
