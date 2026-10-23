@@ -105,13 +105,21 @@
     </style>
     @yield('styles')
 </head>
-<body>
+<body class="cj-has-chat">
 
 <nav class="cj-nav">
     <a href="{{ route('customer.dashboard') }}" class="cj-nav-brand">🍽 Cojan <span>Catering</span></a>
-    <button class="hamburger" onclick="toggleNav()" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNav">
-        <span></span><span></span><span></span>
-    </button>
+    {{-- Phones only: chat is always one tap away up here, even while the
+         floating bubble has stepped aside so it doesn't cover the page. --}}
+    <div class="cj-nav-actions">
+        <button type="button" class="cj-nav-chat" onclick="toggleChat()" aria-label="Open chat with Cojan Support">
+            <span aria-hidden="true">💬</span>
+            <span id="chat-badge-nav" class="cj-nav-chat-badge" aria-hidden="true" style="display:none;">0</span>
+        </button>
+        <button class="hamburger" onclick="toggleNav()" aria-label="Open menu" aria-expanded="false" aria-controls="mobileNav">
+            <span></span><span></span><span></span>
+        </button>
+    </div>
     <div class="cj-nav-links" id="mobileNav">
         <button class="nav-close" onclick="toggleNav()" aria-label="Close menu">&times;</button>
         <a href="{{ route('customer.menu') }}" class="btn-cj-outline btn-cj btn-cj-sm" onclick="toggleNav()">Menu</a>
@@ -660,6 +668,11 @@ function checkUnread() {
             const badge = document.getElementById('chat-badge');
             badge.style.display = d.count > 0 ? 'flex' : 'none';
             badge.textContent = d.count;
+            const navBadge = document.getElementById('chat-badge-nav');
+            if (navBadge) {
+                navBadge.style.display = d.count > 0 ? 'flex' : 'none';
+                navBadge.textContent = d.count;
+            }
 
             // Idle pulse only while closed and nothing unread — an unread
             // badge is already its own, stronger signal.
@@ -669,6 +682,153 @@ function checkUnread() {
 }
 setInterval(checkUnread, 30000);
 checkUnread();
+</script>
+
+<style>
+/* ── CHAT BUBBLE: NEVER COVER THE PAGE ──
+   The bubble is position:fixed with z-index 9999, so on a phone it used to
+   sit over whatever scrolled under it — Place Order, the downpayment
+   amount, alert text, even open modals. Three layers fix that:
+   1. .cj-bubble-away (toggled by the script below) fades it out of the way
+      while it's over anything that matters, and back when it isn't.
+   2. A 💬 button in the phone header keeps chat one tap away regardless.
+   3. Extra footer padding leaves empty space at the very end of every page.
+   !important wherever the bubble's inline style sets the same property —
+   inline styles beat any non-!important stylesheet rule. */
+.cj-nav-actions { display: flex; align-items: center; gap: .35rem; }
+.cj-nav-chat { display: none; }
+#chat-bubble { transition: opacity .2s ease, transform .2s ease; }
+#chat-bubble.cj-bubble-away {
+    opacity: 0 !important;
+    transform: translateY(14px) scale(.6) !important;
+    animation: none !important;   /* the idle pulse animates transform too */
+    pointer-events: none !important;
+}
+#chat-bubble-zone { position: fixed; right: 28px; bottom: 28px; width: 58px; height: 58px; visibility: hidden; pointer-events: none; }
+.cj-has-chat .cj-footer { padding-bottom: calc(1.5rem + 96px + env(safe-area-inset-bottom)); }
+
+@media (max-width: 768px) {
+    #chat-bubble {
+        width: 52px !important;
+        height: 52px !important;
+        right: 14px !important;
+        bottom: calc(14px + env(safe-area-inset-bottom)) !important;
+    }
+    #chat-bubble-zone { right: 14px; bottom: calc(14px + env(safe-area-inset-bottom)); width: 52px; height: 52px; }
+    .cj-nav-chat {
+        display: flex;
+        position: relative;
+        align-items: center;
+        justify-content: center;
+        width: 44px;
+        height: 44px;
+        border: none;
+        border-radius: var(--radius-sm);
+        background: rgba(255,255,255,.12);
+        font-size: 1.25rem;
+        line-height: 1;
+        cursor: pointer;
+    }
+    .cj-nav-chat:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .cj-nav-chat-badge {
+        position: absolute;
+        top: 3px;
+        right: 3px;
+        min-width: 17px;
+        height: 17px;
+        padding: 0 4px;
+        border-radius: 9px;
+        background: #e74c3c;
+        color: #fff;
+        font-size: 10px;
+        font-weight: 700;
+        align-items: center;
+        justify-content: center;
+    }
+    .cj-has-chat .cj-footer { padding-bottom: calc(1.5rem + 80px + env(safe-area-inset-bottom)); }
+}
+</style>
+
+<script>
+/* Keeps the floating chat bubble from covering anything that matters. A
+   hidden twin (#chat-bubble-zone) marks where the bubble sits; on scroll,
+   resize, focus or DOM changes we hit-test a few points inside that zone
+   and look at the topmost thing under the bubble. If it's interactive
+   (button, link, field), an alert, a money amount, an image, a modal or
+   any text, the bubble steps aside (.cj-bubble-away); over empty space it
+   comes back. On phones it also steps aside while the customer is typing
+   in a page form (the keyboard covers that corner anyway). The 💬 header
+   button keeps chat reachable while it's away. */
+(function () {
+    const bubble = document.getElementById('chat-bubble');
+    if (!bubble) return;
+    const zone = document.createElement('div');
+    zone.id = 'chat-bubble-zone';
+    zone.setAttribute('aria-hidden', 'true');
+    document.body.appendChild(zone);
+
+    const AVOID = 'a, button, input, select, textarea, label, img, svg, canvas, video, iframe, '
+        + '.alert-cj, .cj-dp, .badge-cj, .slot-chip, .flatpickr-calendar, .modal, .cj-toast, [data-chat-avoid]';
+    const isPhone = () => window.matchMedia('(max-width: 768px)').matches;
+    const isPageField = (el) => el && el.matches && el.matches('input, textarea, select') && !el.closest('#chat-window');
+    let typing = false;
+    let frame = 0;
+
+    function hasOwnText(el) {
+        for (const node of el.childNodes) {
+            if (node.nodeType === 3 && node.textContent.trim() !== '') return true;
+        }
+        return false;
+    }
+
+    function topmostUnder(x, y) {
+        for (const el of document.elementsFromPoint(x, y)) {
+            if (el === bubble || bubble.contains(el) || el === zone) continue;
+            return el;
+        }
+        return null;
+    }
+
+    function blocked() {
+        // A 5×5 grid over the bubble's footprint plus a 6px safety margin —
+        // dense enough that a single line of text can't slip between sample
+        // points, and wide enough that a button merely grazing the bubble's
+        // edge still counts.
+        const m = 6;
+        const r = zone.getBoundingClientRect();
+        const left = r.left - m, top = r.top - m, w = r.width + 2 * m, h = r.height + 2 * m;
+        const points = [];
+        for (let col = 0; col < 5; col++) {
+            for (let row = 0; row < 5; row++) {
+                points.push([left + col * (w - 1) / 4, top + row * (h - 1) / 4]);
+            }
+        }
+        return points.some(([x, y]) => {
+            const el = topmostUnder(x, y);
+            if (!el || el === document.body || el === document.documentElement) return false;
+            return !!el.closest(AVOID) || hasOwnText(el);
+        });
+    }
+
+    function update() {
+        frame = 0;
+        if (document.body.classList.contains('chat-open')) {
+            bubble.classList.remove('cj-bubble-away');
+            return;
+        }
+        bubble.classList.toggle('cj-bubble-away', (typing && isPhone()) || blocked());
+    }
+    const schedule = () => { if (!frame) frame = requestAnimationFrame(update); };
+
+    window.addEventListener('scroll', schedule, { passive: true });
+    window.addEventListener('resize', schedule);
+    window.addEventListener('load', schedule);
+    document.addEventListener('focusin', (e) => { if (isPageField(e.target)) { typing = true; schedule(); } });
+    document.addEventListener('focusout', () => setTimeout(() => { typing = isPageField(document.activeElement); schedule(); }, 0));
+    // Content that appears later (slot chips, toasts, opened modals, alerts).
+    new MutationObserver(schedule).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class', 'style'] });
+    schedule();
+})();
 </script>
 
 <script>

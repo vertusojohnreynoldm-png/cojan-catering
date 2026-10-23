@@ -43,7 +43,6 @@ BSIT capstone: Laravel 13 / PHP 8.3 web ordering, delivery and QR-tracking syste
 ## Open work (do only when asked)
 
 - Real-time stage 2b: admin new-order alerts, live customer status, rider assignment alerts, low-stock.
-- Chat bubble covers checkout Place Order button: add bottom padding on checkout, package checkout, and Avail pages.
 - Remaining mobile checks: order list / detail / tracking / profile / footer / rider screens.
 - Live-site cleanup: replace seeded passwords (`admin123` / `customer123` / `delivery123`), rename odd demo utensil "John Reynold Vertuso".
 - Optional: fix the 9 failing Breeze tests.
