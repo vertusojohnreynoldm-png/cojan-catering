@@ -190,6 +190,13 @@ Route::middleware(['auth', 'role:customer'])
     ->get('/track/{orderNumber}', [OrderController::class, 'track'])
     ->name('customer.orders.track');
 
+// Live tracking data for the tracking page (menu orders). Accepts no
+// coordinates — the server uses the rider's stored location. Same per-user
+// limiter as the rider's route endpoint.
+Route::middleware(['auth', 'role:customer', 'throttle:routing'])
+    ->get('/track/{orderNumber}/live', [OrderController::class, 'trackRoute'])
+    ->name('customer.orders.track.live');
+
 // Delivery routes
 Route::middleware(['auth', 'role:delivery'])->prefix('delivery')->name('delivery.')->group(function () {
     Route::get('/dashboard', [DeliveryDashboard::class, 'index'])->name('dashboard');

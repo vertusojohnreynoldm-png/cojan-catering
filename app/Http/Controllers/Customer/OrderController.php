@@ -14,6 +14,7 @@ use App\Models\OrderItem;
 use App\Services\ActivityLogger;
 use App\Services\BookingCapacity;
 use App\Services\DeliveryLocation;
+use App\Services\RouteService;
 use App\Services\OrderSubmissionGuard;
 use App\Services\SubmissionToken;
 use App\Services\BusinessHours;
@@ -436,7 +437,85 @@ class OrderController extends Controller
             ->with('orderItems.menuItem', 'orderItems.package', 'delivery')
             ->firstOrFail();
 
-        return view('customer.order-track', compact('order'));
+        // Menu orders only: live map + 4-step stepper. Bookings keep the
+        // existing timeline and never get a map.
+        $tracking = $order->isBooking() ? null : $this->trackingState($order);
+
+        // First route drawn with the page itself (RouteService caches it), so
+        // the map is complete on load without an extra live request.
+        if ($tracking && $tracking['active'] && $tracking['rider']) {
+            $tracking['route'] = RouteService::route(
+                [$tracking['rider']['lat'], $tracking['rider']['lng']],
+                [$tracking['destination']['lat'], $tracking['destination']['lng']]
+            );
+        }
+
+        return view('customer.order-track', compact('order', 'tracking'));
+    }
+
+    /**
+     * Live tracking data for the customer's own menu order. Takes NO
+     * coordinates from the browser: the origin is always the rider's last
+     * stored location (deliveries.current_lat/lng) and the destination the
+     * order's own pin. Rate-limited per user (throttle:routing).
+     */
+    public function trackRoute($orderNumber)
+    {
+        $order = Order::where('order_number', $orderNumber)
+            ->where('user_id', auth()->id())
+            ->with('delivery')
+            ->firstOrFail();
+
+        abort_if($order->isBooking(), 404);
+
+        $state = $this->trackingState($order);
+
+        if ($state['active'] && $state['rider']) {
+            $state['route'] = RouteService::route(
+                [$state['rider']['lat'], $state['rider']['lng']],
+                [$state['destination']['lat'], $state['destination']['lng']]
+            );
+        }
+
+        return response()->json($state);
+    }
+
+    /**
+     * active  — rider is on the way (picked up / in transit, order not finished)
+     * final   — 'delivered' | 'cancelled' once there's nothing live to show
+     * rider   — last stored rider fix (only while active)
+     */
+    private function trackingState(Order $order): array
+    {
+        $delivery = $order->delivery;
+        $final = in_array($order->status, ['delivered', 'cancelled'], true) ? $order->status : null;
+        if (!$final && $delivery && in_array($delivery->status, ['delivered', 'failed'], true)) {
+            $final = $delivery->status === 'delivered' ? 'delivered' : 'cancelled';
+        }
+
+        $active = !$final && $delivery && in_array($delivery->status, ['picked_up', 'in_transit'], true);
+
+        $rider = null;
+        if ($active && $delivery->current_lat !== null && $delivery->current_lng !== null) {
+            $rider = [
+                'lat'         => (float) $delivery->current_lat,
+                'lng'         => (float) $delivery->current_lng,
+                'accuracy'    => $delivery->current_accuracy !== null ? (float) $delivery->current_accuracy : null,
+                'heading'     => $delivery->current_heading !== null ? (float) $delivery->current_heading : null,
+                'speed'       => $delivery->current_speed !== null ? (float) $delivery->current_speed : null,
+                'updated_at'  => $delivery->last_location_update?->toIso8601String(),
+                // Server-side age, so a wrong phone clock can't fake "fresh".
+                'age_seconds' => $delivery->last_location_update ? max(0, (int) $delivery->last_location_update->diffInSeconds(now())) : null,
+            ];
+        }
+
+        return [
+            'active'      => $active,
+            'final'       => $final,
+            'rider'       => $rider,
+            'route'       => null,
+            'destination' => DeliveryLocation::forOrder($order),
+        ];
     }
 
     public function confirmReceived($id)

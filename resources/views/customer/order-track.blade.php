@@ -3,7 +3,9 @@
 @section('title', 'Track Order — Cojan Catering')
 
 @section('styles')
+@if($tracking && !$tracking['final'])
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+@endif
 @endsection
 
 @section('content')
@@ -13,31 +15,55 @@
 <h1 class="cj-page-title">Order Tracking</h1>
 <p class="cj-page-sub">Order #{{ $order->order_number }}</p>
 
-@php
-    $trackingActive = $order->delivery
-        && in_array($order->delivery->status, ['picked_up', 'in_transit'])
-        && $order->delivery->current_lat !== null
-        && $order->delivery->current_lng !== null;
-@endphp
+@if($tracking)
+    {{-- MENU ORDERS: stepper + live map (rider → your pin). Bookings below
+         keep the original timeline and never get a map. --}}
+    <section class="cj-card mb-3 cj-track" aria-label="Live order tracking">
+        <div class="cj-card-header">Your Order</div>
+        <div class="cj-card-body">
+            <x-delivery-stepper :order="$order" />
 
-<div class="cj-card mb-3">
-    <div class="cj-card-header">Live Rider Location</div>
-    <div class="cj-card-body">
-        <div id="delivery-map" style="height:320px;border-radius:var(--radius-base);{{ $trackingActive ? '' : 'display:none;' }}"></div>
-        <p id="delivery-map-updated" style="font-size:.78rem;color:var(--text-light);margin-top:.5rem;margin-bottom:0;{{ $trackingActive ? '' : 'display:none;' }}"></p>
-        <p id="delivery-map-waiting" style="color:var(--text-light);margin:0;{{ $trackingActive ? 'display:none;' : '' }}">
-            Live tracking will appear once your order is picked up.
-        </p>
-    </div>
-</div>
+            @unless($tracking['final'])
+                <div class="cj-track-live">
+                    <div id="track-map" class="cj-track-map" role="img"
+                         aria-label="Map showing your delivery location{{ $tracking['active'] ? ' and your rider' : '' }}"></div>
 
-<!-- Status Timeline -->
-<div class="cj-card mb-3">
-    <div class="cj-card-header">Delivery Status</div>
-    <div class="cj-card-body">
-        <x-order-timeline :order="$order" />
+                    <div class="cj-track-summary" aria-live="polite">
+                        <span class="cj-route-figure"><i class="bi bi-signpost-split"></i> <strong id="track-distance">—</strong></span>
+                        <span class="cj-route-figure"><i class="bi bi-clock"></i> <strong id="track-eta">—</strong></span>
+                        <span class="cj-track-updated" id="track-updated"></span>
+                    </div>
+                    <div class="cj-track-stale" id="track-stale" role="alert" hidden>
+                        <i class="bi bi-exclamation-triangle" aria-hidden="true"></i>
+                        <span><strong>Location stale</strong> — <span id="track-stale-text"></span></span>
+                    </div>
+                    <p class="cj-track-note" id="track-note">
+                        @if(!$tracking['active'])
+                            Your rider's live location will appear here once your order is out for delivery.
+                        @elseif(!$tracking['rider'])
+                            Your rider is on the way — waiting for their first location update…
+                        @else
+                            Your rider is on the way.
+                        @endif
+                    </p>
+                    @if($tracking['destination']['approximate'])
+                        <p class="cj-track-note" style="color:var(--status-amber-text);">
+                            <i class="bi bi-info-circle"></i> Your pin is approximate (barangay centre) — the rider may call to confirm the exact spot.
+                        </p>
+                    @endif
+                </div>
+            @endunless
+        </div>
+    </section>
+@else
+    <!-- Status Timeline (catering bookings) -->
+    <div class="cj-card mb-3">
+        <div class="cj-card-header">Status</div>
+        <div class="cj-card-body">
+            <x-order-timeline :order="$order" />
+        </div>
     </div>
-</div>
+@endif
 
 <x-delivery-proof-card :order="$order" />
 
@@ -112,88 +138,170 @@
 </div>
 @endsection
 
+
 @section('scripts')
+@if($tracking && !$tracking['final'])
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+/* Customer live tracking (menu orders). The page NEVER sends coordinates:
+   GET track.live returns the rider's last STORED fix, the route from it to
+   this order's pin, and whether tracking is still live. Live rider moves
+   arrive over the private Echo channel (with heading/speed); the endpoint
+   is polled every 30 s as a fallback and re-asked for a route only when
+   the rider drifts ~50 m off it or after 60 s. Once the order is delivered
+   or cancelled, polling and Echo stop and the page reloads once to show
+   the final state (it then renders without any of this). */
 (function () {
-    const orderId = {{ $order->id }};
-    const mapEl = document.getElementById('delivery-map');
-    const updatedEl = document.getElementById('delivery-map-updated');
-    const waitingEl = document.getElementById('delivery-map-waiting');
-    const SAN_JOSE = [12.3585, 121.0687]; // San Jose, Occidental Mindoro
-    const STALE_AFTER_MS = 60000;
-    let map = null;
-    let marker = null;
-    let accuracyCircle = null;
-    let lastUpdateTimestamp = null;
+    const LIVE_URL = {{ \Illuminate\Support\Js::from(route('customer.orders.track.live', $order->order_number)) }};
+    const ORDER_ID = {{ $order->id }};
+    let state = {{ \Illuminate\Support\Js::from($tracking) }};
 
-    function ensureMap(lat, lng) {
-        if (map) return;
-        mapEl.style.display = 'block';
-        updatedEl.style.display = 'block';
-        waitingEl.style.display = 'none';
-        const center = (lat && lng) ? [lat, lng] : SAN_JOSE;
-        map = L.map('delivery-map').setView(center, 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '&copy; OpenStreetMap contributors',
-            maxZoom: 19,
-        }).addTo(map);
-        marker = L.marker(center).addTo(map).bindPopup('Rider location');
+    const POLL_MS = 30000, ROUTE_EVERY_MS = 60000, OFF_ROUTE_M = 50, STALE_S = 120, ANIMATE_MS = 900;
+    const $ = (id) => document.getElementById(id);
+    const distEl = $('track-distance'), etaEl = $('track-eta'), updatedEl = $('track-updated');
+    const staleEl = $('track-stale'), staleText = $('track-stale-text'), noteEl = $('track-note');
+
+    const toRad = (d) => d * Math.PI / 180;
+    const fmtDistance = (m) => m >= 1000 ? (m / 1000).toFixed(m >= 10000 ? 0 : 1) + ' km' : Math.round(m / 10) * 10 + ' m';
+    const fmtEta = (s) => s < 60 ? '< 1 min' : (s < 3600 ? Math.round(s / 60) + ' min' : Math.floor(s / 3600) + ' h ' + Math.round((s % 3600) / 60) + ' min');
+    const fmtAgo = (s) => s < 60 ? s + ' s ago' : (s < 3600 ? Math.floor(s / 60) + ' min ago' : 'over an hour ago');
+
+    if (!window.L) { $('track-map').style.display = 'none'; return; }
+
+    const dest = [state.destination.lat, state.destination.lng];
+    const map = L.map('track-map', { scrollWheelZoom: false, dragging: !window.matchMedia('(pointer: coarse)').matches })
+        .setView(dest, 16);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
+    L.marker(dest, { icon: L.divIcon({ className: 'cj-pin-icon', html: '<span></span>', iconSize: [34, 44], iconAnchor: [17, 42] }), title: 'Your delivery location' })
+        .addTo(map).bindTooltip('You');
+    setTimeout(() => map.invalidateSize(), 200);
+
+    // ---- rider marker: glide between fixes, point by heading -------------------
+    let rider = null, shown = null, frame = 0, heading = null;
+    function applyHeading() {
+        const el = rider && rider.getElement();
+        if (!el) return;
+        el.classList.toggle('has-heading', heading !== null);
+        if (heading !== null) el.querySelector('.cj-rider-arrow').style.transform = `rotate(${heading}deg)`;
+    }
+    function placeRider(pos, hdg) {
+        if (hdg !== null && hdg !== undefined && !isNaN(hdg)) heading = parseFloat(hdg);
+        if (!rider) {
+            rider = L.marker(pos, {
+                icon: L.divIcon({ className: 'cj-rider-marker', html: '<span class="cj-rider-dot2"></span><span class="cj-rider-arrow"></span>', iconSize: [36, 36], iconAnchor: [18, 18] }),
+                title: 'Your rider', zIndexOffset: 1000, keyboard: false,
+            }).addTo(map).bindTooltip('Rider');
+            shown = pos;
+            applyHeading();
+            if (!routeLine) map.fitBounds(L.latLngBounds([pos, dest]).pad(0.25));
+            return;
+        }
+        cancelAnimationFrame(frame);
+        const from = shown, t0 = performance.now();
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const step = (now) => {
+            const k = reduce ? 1 : Math.min(1, (now - t0) / ANIMATE_MS);
+            const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+            shown = [from[0] + (pos[0] - from[0]) * e, from[1] + (pos[1] - from[1]) * e];
+            rider.setLatLng(shown);
+            if (k < 1) frame = requestAnimationFrame(step);
+        };
+        frame = requestAnimationFrame(step);
+        applyHeading();
     }
 
-    function refreshStaleness() {
-        if (lastUpdateTimestamp === null) return;
-        const ageMs = Date.now() - lastUpdateTimestamp;
-        if (ageMs > STALE_AFTER_MS) {
-            updatedEl.textContent = 'Rider location may be outdated';
-            updatedEl.style.color = 'var(--danger)';
-        } else {
-            updatedEl.textContent = 'Last updated ' + new Date(lastUpdateTimestamp).toLocaleTimeString();
-            updatedEl.style.color = '';
+    // ---- route ------------------------------------------------------------------
+    let routeLine = null, routePoints = [], lastRouteAt = 0, fitted = false;
+    function distanceToRoute(p) {
+        if (routePoints.length < 2) return Infinity;
+        const k = 111320, cos = Math.cos(toRad(p[0]));
+        const xy = (q) => [(q[1] - p[1]) * k * cos, (q[0] - p[0]) * k];
+        let best = Infinity;
+        for (let i = 1; i < routePoints.length; i++) {
+            const [ax, ay] = xy(routePoints[i - 1]), [bx, by] = xy(routePoints[i]);
+            const dx = bx - ax, dy = by - ay, len = dx * dx + dy * dy;
+            const t = len ? Math.max(0, Math.min(1, -(ax * dx + ay * dy) / len)) : 0;
+            best = Math.min(best, Math.hypot(ax + t * dx, ay + t * dy));
         }
+        return best;
     }
-    setInterval(refreshStaleness, 15000);
-
-    function updateMarker(lat, lng, updatedAt, accuracy) {
-        ensureMap(lat, lng);
-        marker.setLatLng([lat, lng]);
-        map.panTo([lat, lng]);
-
-        if (accuracy !== null && accuracy !== undefined) {
-            if (accuracyCircle) {
-                accuracyCircle.setLatLng([lat, lng]);
-                accuracyCircle.setRadius(accuracy);
-            } else {
-                accuracyCircle = L.circle([lat, lng], {
-                    radius: accuracy,
-                    color: '#C1441E',
-                    fillColor: '#C1441E',
-                    fillOpacity: 0.15,
-                    weight: 1,
-                }).addTo(map);
-            }
-        }
-
-        lastUpdateTimestamp = updatedAt ? new Date(updatedAt).getTime() : Date.now();
-        refreshStaleness();
+    function drawRoute(r) {
+        if (!r) return;
+        routePoints = r.geometry;
+        lastRouteAt = Date.now();
+        if (routeLine) map.removeLayer(routeLine);
+        routeLine = L.polyline(routePoints, r.fallback
+            ? { color: '#C1441E', weight: 4, opacity: .8, dashArray: '8 10' }
+            : { color: '#C1441E', weight: 6, opacity: .85 }).addTo(map);
+        distEl.textContent = fmtDistance(r.distance_m);
+        etaEl.textContent = (r.fallback ? '~' : '') + fmtEta(r.duration_s);
+        if (!fitted) { map.fitBounds(L.latLngBounds(routePoints).pad(0.15)); fitted = true; }
     }
 
-    @if($trackingActive)
-        updateMarker(
-            {{ $order->delivery->current_lat }},
-            {{ $order->delivery->current_lng }},
-            '{{ $order->delivery->last_location_update?->toIso8601String() }}',
-            {{ $order->delivery->current_accuracy ?? 'null' }}
-        );
-    @endif
+    // ---- "Updated X s ago" + stale warning -----------------------------------------
+    let ageBase = null, ageAt = 0;
+    function setAge(seconds) { ageBase = seconds; ageAt = Date.now(); tick(); }
+    function tick() {
+        if (ageBase === null) { updatedEl.textContent = ''; staleEl.hidden = true; return; }
+        const age = Math.max(0, Math.round(ageBase + (Date.now() - ageAt) / 1000));
+        updatedEl.textContent = 'Updated ' + fmtAgo(age);
+        const stale = age >= STALE_S;
+        staleEl.hidden = !stale;
+        updatedEl.classList.toggle('stale', stale);
+        if (stale) staleText.textContent = 'the rider’s last update was ' + fmtAgo(age) + '. They may be in an area with weak signal; the map will catch up automatically.';
+    }
+    const ticker = setInterval(tick, 1000);
 
-    @if($order->delivery && in_array($order->delivery->status, ['picked_up', 'in_transit']))
-        if (window.Echo) {
-            window.Echo.private(`delivery.${orderId}`).listen('DeliveryLocationUpdated', (e) => {
-                updateMarker(e.lat, e.lng, e.updated_at, e.accuracy);
-            });
+    // ---- apply a state from the server -----------------------------------------------
+    let stopped = false, pollTimer = null, channel = null;
+    function finish() {
+        if (stopped) return;
+        stopped = true;
+        clearInterval(pollTimer);
+        clearInterval(ticker);
+        try { if (channel && window.Echo) window.Echo.leave(`delivery.${ORDER_ID}`); } catch (e) {}
+        // Reload once: the server now renders the final state (no live map).
+        window.location.reload();
+    }
+    function apply(s) {
+        state = s;
+        if (s.final) { finish(); return; }
+        if (s.rider) {
+            placeRider([s.rider.lat, s.rider.lng], s.rider.heading);
+            setAge(s.rider.age_seconds ?? 0);
+            noteEl.textContent = 'Your rider is on the way.';
+        } else if (s.active) {
+            noteEl.textContent = 'Your rider is on the way — waiting for their first location update…';
         }
-    @endif
+        if (s.route) drawRoute(s.route);
+    }
+
+    async function refresh() {
+        if (stopped) return;
+        try {
+            const resp = await fetch(LIVE_URL, { headers: { 'Accept': 'application/json' } });
+            if (resp.ok) apply(await resp.json()); // 429 keeps what is already shown
+        } catch (e) { /* offline: the next poll retries */ }
+    }
+
+    apply(state);
+    // The page already arrives with the first route; only ask right away
+    // if it did not (e.g. the rider had no location yet when it rendered).
+    if (state.active && !state.route) refresh();
+    pollTimer = setInterval(refresh, POLL_MS);
+
+    // Live moves (heading/speed included) between polls.
+    if (window.Echo && state.active) {
+        channel = window.Echo.private(`delivery.${ORDER_ID}`).listen('DeliveryLocationUpdated', (e) => {
+            if (stopped) return;
+            const pos = [parseFloat(e.lat), parseFloat(e.lng)];
+            placeRider(pos, e.heading);
+            setAge(0);
+            noteEl.textContent = 'Your rider is on the way.';
+            if (!routeLine || Date.now() - lastRouteAt > ROUTE_EVERY_MS || distanceToRoute(pos) > OFF_ROUTE_M) refresh();
+        });
+    }
 })();
 </script>
+@endif
 @endsection
