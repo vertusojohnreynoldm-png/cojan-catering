@@ -10,6 +10,13 @@
     <x-account-restricted-notice />
 @endif
 
+@foreach($cartNotices as $notice)
+    <div class="alert-cj alert-warning" role="status">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        <span>{{ $notice }}</span>
+    </div>
+@endforeach
+
 @if(!empty($cart) && $hasMenuItems && !$orderingOpen)
     <div class="alert-cj alert-warning mb-3">
         <i class="bi bi-clock-history"></i>
@@ -50,20 +57,12 @@
                             </td>
                             <td>₱{{ number_format($item['price'], 2) }}</td>
                             <td>
-                                <form method="POST" action="{{ route('customer.cart.update', $id) }}"
-                                      x-data="{ qty: {{ $item['quantity'] }} }">
+                                <form method="POST" action="{{ route('customer.cart.update', $id) }}">
                                     @csrf
-                                    <input type="hidden" name="quantity" :value="qty">
-                                    <div class="cj-stepper cj-stepper-sm">
-                                        <button type="button" class="cj-stepper-btn"
-                                                @click="qty = Math.max(0, qty - 1); $nextTick(() => $el.closest('form').submit())"
-                                                :title="qty <= 1 ? 'Remove item' : 'Decrease quantity'"
-                                                :aria-label="qty <= 1 ? 'Remove item' : 'Decrease quantity'">−</button>
-                                        <span class="cj-stepper-value" x-text="qty" aria-live="polite"></span>
-                                        <button type="button" class="cj-stepper-btn"
-                                                @click="qty++; $nextTick(() => $el.closest('form').submit())"
-                                                aria-label="Increase quantity">+</button>
-                                    </div>
+                                    <x-qty-stepper :value="$item['quantity']"
+                                                   :max="($item['type'] ?? 'menu') === 'package' ? null : $maxQty"
+                                                   autosubmit remove-at-zero
+                                                   :label="'Quantity of ' . $item['name']" />
                                 </form>
                             </td>
                             <td>₱{{ number_format($item['price'] * $item['quantity'], 2) }}</td>

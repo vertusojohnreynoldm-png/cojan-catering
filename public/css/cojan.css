@@ -742,6 +742,32 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
 .cj-stepper-sm .cj-stepper-btn { width: 26px; height: 26px; font-size: .85rem; }
 .cj-stepper-sm .cj-stepper-value { min-width: 26px; font-size: .82rem; }
 
+/* Typed quantity (components/qty-stepper): the middle of the stepper is a small
+   numeric input so a customer can enter 12 without tapping + eleven times. */
+[x-cloak] { display: none !important; }
+.cj-qty { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 4px; max-width: 100%; }
+.cj-stepper-input {
+  width: 40px;
+  height: 26px;
+  border: none;
+  border-left: 1px solid #e3d8cb;
+  border-right: 1px solid #e3d8cb;
+  padding: 0 2px;
+  text-align: center;
+  font-family: inherit;
+  font-weight: 600;
+  font-size: .85rem;
+  color: var(--text-dark);
+  background: var(--white);
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.cj-stepper-input:focus { outline: 2px solid var(--green-dark); outline-offset: -2px; }
+.cj-stepper-input:disabled { color: var(--text-muted); background: var(--white); }
+.cj-qty-msg { font-size: var(--fs-xs, .75rem); color: var(--required); line-height: 1.3; }
+.menu-card-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-start; }
+.menu-card-actions .menu-card-btn { flex: 1 1 7rem; min-height: 28px; }
+
 /* ── UTILITY ── */
 .text-green { color: var(--green-dark) !important; }
 .text-amber { color: var(--amber) !important; }
@@ -778,6 +804,9 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
      above this media query. */
   .cj-stepper-sm .cj-stepper-btn { width: 44px; height: 44px; font-size: 1.1rem; }
   .cj-stepper-sm .cj-stepper-value { min-width: 36px; font-size: .9rem; }
+  /* 16px stops iOS zooming on focus; 44px tall like the buttons beside it. */
+  .cj-stepper-input { width: 48px; height: 44px; font-size: 16px; }
+  .menu-card-actions .menu-card-btn { min-height: 44px; }
 }
 
 /* ── MOBILE: SAFE-AREA-AWARE STICKY ACTION BAR ──

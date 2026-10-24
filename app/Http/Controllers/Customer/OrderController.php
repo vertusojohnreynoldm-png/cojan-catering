@@ -13,6 +13,7 @@ use App\Models\Order;
 use App\Models\OrderItem;
 use App\Services\ActivityLogger;
 use App\Services\BookingCapacity;
+use App\Services\CartService;
 use App\Services\DeliveryLocation;
 use App\Services\RouteService;
 use App\Services\OrderSubmissionGuard;
@@ -43,7 +44,9 @@ class OrderController extends Controller
 
     public function checkout()
     {
-        $cart = session()->get('cart', []);
+        // Database prices × validated quantities; an older cart over the
+        // per-item limit is capped here, with a notice shown on the page.
+        [$cart, $cartNotices] = CartService::refresh();
 
         if (empty($cart)) {
             return redirect()->route('customer.menu')->with('error', 'Your cart is empty!');
@@ -62,7 +65,7 @@ class OrderController extends Controller
             );
         }
 
-        $total = array_sum(array_map(fn($item) => $item['price'] * $item['quantity'], $cart));
+        $total = CartService::subtotal($cart);
 
         // Static QR Ph / InstaPay payload — this is a real, account-linked
         // scannable payment code, so it's encoded byte-for-byte as-is. It
@@ -109,7 +112,7 @@ class OrderController extends Controller
         ] : null;
 
         return view('customer.checkout', compact(
-            'cart', 'total', 'gcashQr', 'minDeliveryDate', 'maxDeliveryDate',
+            'cart', 'cartNotices', 'total', 'gcashQr', 'minDeliveryDate', 'maxDeliveryDate',
             'hasMenuItems', 'sanJoseBarangays', 'cateringAreas',
             'blockedDeliveryDates', 'todayBlockedReason', 'pendingLimitError', 'submissionToken', 'pinMap'
         ));
@@ -171,10 +174,19 @@ class OrderController extends Controller
             $deliveryWindowLabel = DeliverySlots::labelFor($request->delivery_slot);
         }
 
-        $cart = session()->get('cart', []);
+        // Prices and quantities come from here on: database price × validated,
+        // capped quantity — never anything the browser sent.
+        [$cart, $cartNotices] = CartService::refresh();
 
         if (empty($cart)) {
             return redirect()->route('customer.menu')->with('error', 'Your cart is empty!');
+        }
+
+        // Something had to be capped (an older cart over the per-item limit):
+        // don't place an order the customer hasn't seen — send them back to
+        // review the corrected quantities and total first.
+        if ($cartNotices) {
+            return redirect()->route('customer.checkout')->withInput()->with('error', implode(' ', $cartNotices) . ' Please review your order total.');
         }
 
         // Authoritative check — this is the actual order-creation point, so
@@ -274,7 +286,7 @@ class OrderController extends Controller
             );
         }
 
-        $subtotal = array_sum(array_map(fn($item) => $item['price'] * $item['quantity'], $cart));
+        $subtotal = CartService::subtotal($cart); // database price × validated quantity
         $deliveryFee = 50;
         $total = $subtotal + $deliveryFee;
 

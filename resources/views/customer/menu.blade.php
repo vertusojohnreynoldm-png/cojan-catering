@@ -51,16 +51,12 @@
                 <div class="menu-card-name">{{ $item->name }}</div>
                 <div class="menu-card-desc">{{ $item->description }}</div>
                 <div class="menu-card-price">₱{{ number_format($item->price, 2) }}</div>
-                <form method="POST" action="{{ route('customer.cart.add') }}" x-data="{ qty: 1 }">
+                <form method="POST" action="{{ route('customer.cart.add') }}">
                     @csrf
                     <input type="hidden" name="menu_item_id" value="{{ $item->id }}">
-                    <input type="hidden" name="quantity" :value="qty">
-                    <div class="d-flex gap-2 align-items-center">
-                        <div class="cj-stepper cj-stepper-sm">
-                            <button type="button" class="cj-stepper-btn" @click="qty = Math.max(1, qty - 1)" :disabled="qty <= 1" aria-label="Decrease quantity" {{ $orderingOpen ? '' : 'disabled' }}>−</button>
-                            <span class="cj-stepper-value" x-text="qty" aria-live="polite"></span>
-                            <button type="button" class="cj-stepper-btn" @click="qty++" aria-label="Increase quantity" {{ $orderingOpen ? '' : 'disabled' }}>+</button>
-                        </div>
+                    <div class="menu-card-actions">
+                        <x-qty-stepper :max="$maxQty" :disabled="!$orderingOpen"
+                                       :label="'Quantity of ' . $item->name" />
                         <button type="submit" class="menu-card-btn" style="flex:1;" {{ $orderingOpen ? '' : 'disabled title="We\'re currently closed"' }}>
                             {{ $orderingOpen ? '+ Add to Cart' : 'Closed' }}
                         </button>

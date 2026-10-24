@@ -197,6 +197,62 @@
 @vite(['resources/js/app.js'])
 
 <script>
+// Quantity stepper behaviour (components/qty-stepper). Taps change the number at once; typing keeps
+// only digits, snaps anything over the limit back to the limit (with the
+// message), and on blur reverts an empty/0 entry to the last good number.
+// With autosubmit (cart) taps submit straight away, typing submits on
+// blur/Enter or after a short pause — never on every keystroke. The server
+// validates and caps again; this is only a convenience.
+window.cjQty = function (o) {
+    return {
+        qty: o.value, last: o.value, saved: o.value,
+        min: o.min, max: o.max, locked: o.locked,
+        msg: '', timer: null,
+        maxMsg() { return 'Maximum ' + this.max + ' per item per order.'; },
+        show(n) { this.qty = this.last = n; this.$refs.input.value = String(n); },
+        inc() {
+            if (this.max !== null && this.qty >= this.max) { this.msg = this.maxMsg(); return; }
+            this.show(this.qty + 1);
+            this.msg = (this.max !== null && this.qty >= this.max) ? this.maxMsg() : '';
+            this.submit();
+        },
+        dec() {
+            this.msg = '';
+            if (this.qty > this.min) { this.show(this.qty - 1); this.submit(); }
+            else if (o.removeAtZero) { this.show(0); this.submit(); }
+        },
+        typed() {
+            clearTimeout(this.timer);
+            const input = this.$refs.input;
+            const digits = input.value.replace(/\D/g, '').replace(/^0+(?=\d)/, '');
+            if (digits !== input.value) input.value = digits;
+            const n = parseInt(digits, 10);
+            if (!n) { this.msg = ''; return; }          // empty / 0 → resolved on blur
+            if (this.max !== null && n > this.max) {
+                this.show(this.max);
+                this.msg = this.maxMsg();
+            } else {
+                this.qty = this.last = n;
+                this.msg = '';
+            }
+            if (o.autosubmit) this.timer = setTimeout(() => this.submit(), 1000);
+        },
+        commit() {
+            clearTimeout(this.timer);
+            const n = parseInt(this.$refs.input.value, 10);
+            this.show(n >= 1 ? n : this.last);
+            this.submit();
+        },
+        submit() {
+            if (!o.autosubmit || this.qty === this.saved) return;
+            this.saved = this.qty;
+            this.$refs.input.form.submit();
+        },
+    };
+};
+</script>
+
+<script>
 // Shared by any page with a PH-mobile-number field (checkout, the catering
 // Avail form) — mirrors App\Rules\PhilippineMobileNumber exactly, including
 // the repeated-digit junk check, so the live hint never says "looks good"

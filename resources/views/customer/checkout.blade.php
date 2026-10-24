@@ -38,6 +38,12 @@
 @section('content')
 <x-breadcrumbs :items="['Menu' => route('customer.menu'), 'Cart' => route('customer.cart'), 'Checkout' => null]" />
 <h1 class="cj-page-title">Checkout</h1>
+@foreach($cartNotices as $notice)
+    <div class="alert-cj alert-warning" role="status">
+        <i class="bi bi-info-circle" aria-hidden="true"></i>
+        <span>{{ $notice }} Your total below has been updated.</span>
+    </div>
+@endforeach
 @if(\App\Services\BusinessHours::bypassActive())
     <div class="alert-cj alert-info" role="note" style="font-size:var(--fs-xs);">
         <i class="bi bi-wrench"></i> Local testing: business hours are bypassed (BUSINESS_HOURS_BYPASS). This never applies in production.

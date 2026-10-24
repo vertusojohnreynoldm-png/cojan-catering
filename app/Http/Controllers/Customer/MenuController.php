@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Category;
 use App\Models\MenuItem;
 use App\Services\BusinessHours;
+use App\Services\CartService;
 use Illuminate\Http\Request;
 
 class MenuController extends Controller
@@ -20,7 +21,8 @@ class MenuController extends Controller
 
         return view('customer.menu', array_merge(
             compact('categories', 'menuItems', 'totalAvailableCount'),
-            $this->businessHoursContext()
+            $this->businessHoursContext(),
+            ['maxQty' => CartService::maxPerItem()]
         ));
     }
 
@@ -45,7 +47,8 @@ class MenuController extends Controller
 
         return view('customer.menu', array_merge(
             compact('categories', 'menuItems', 'category', 'totalAvailableCount'),
-            $this->businessHoursContext()
+            $this->businessHoursContext(),
+            ['maxQty' => CartService::maxPerItem()]
         ));
     }
 

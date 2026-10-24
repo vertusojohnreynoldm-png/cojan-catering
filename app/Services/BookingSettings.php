@@ -51,6 +51,11 @@ class BookingSettings
             'label' => 'Downpayment deadline (hours)',
             'help' => 'Unpaid bookings are cancelled automatically after this many hours — or at the event start, if that comes first. A receipt waiting for review is never cancelled.',
         ],
+        'max_quantity_per_menu_item' => [
+            'default' => 20, 'min' => 1, 'max' => 200,
+            'label' => 'Max quantity per menu item per order',
+            'help' => 'Customers can\'t order more than this many of one menu item in a single order. Catering packages are not affected.',
+        ],
         'max_pending_catering_bookings' => [
             'default' => 2, 'min' => 1, 'max' => 20,
             'label' => 'Max pending catering bookings per customer',
