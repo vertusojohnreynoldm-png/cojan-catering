@@ -18,7 +18,7 @@
     <div class="cj-card mt-3">
         <div class="cj-card-body p-0">
             <div class="table-responsive">
-                <table class="cj-table">
+                <table class="cj-table cj-table-stack">
                     <thead>
                         <tr>
                             <th>Order #</th>
@@ -33,19 +33,19 @@
                     <tbody>
                         @foreach($orders as $order)
                         <tr>
-                            <td><strong>{{ $order->order_number }}</strong></td>
-                            <td>{{ $order->created_at->format('M d, Y') }}</td>
-                            <td>{{ $order->isBooking() ? $order->event_date->format('M d, Y h:i A') : $order->deliveryTimeLabel() }}</td>
-                            <td>₱{{ number_format($order->total_amount, 2) }}</td>
-                            <td>
+                            <td class="cj-td-title"><strong>{{ $order->order_number }}</strong></td>
+                            <td data-label="Date">{{ $order->created_at->format('M d, Y') }}</td>
+                            <td data-label="{{ $order->isBooking() ? 'Event' : 'Delivery' }}">{{ $order->isBooking() ? $order->event_date->format('M d, Y h:i A') : $order->deliveryTimeLabel() }}</td>
+                            <td data-label="Total">₱{{ number_format($order->total_amount, 2) }}</td>
+                            <td data-label="Status">
                                 <x-order-status-badge :order="$order" />
                             </td>
-                            <td>
+                            <td data-label="Payment">
                                 <span class="badge-cj {{ $order->payment_status == 'paid' ? 'badge-delivered' : 'badge-pending' }}">
                                     {{ ucfirst($order->payment_status) }}
                                 </span>
                             </td>
-                            <td>
+                            <td data-label="" class="cj-td-actions">
                                 <a href="{{ route('customer.orders.show', $order->id) }}"
                                    class="btn-cj btn-cj-sm">View</a>
                             </td>

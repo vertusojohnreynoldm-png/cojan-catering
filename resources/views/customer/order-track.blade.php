@@ -113,7 +113,7 @@
             <div class="cj-card-header">Items Ordered</div>
             <div class="cj-card-body p-0">
                 <div class="table-responsive">
-                    <table class="cj-table">
+                    <table class="cj-table cj-table-stack">
                         <thead>
                             <tr>
                                 <th>Item</th>
@@ -124,9 +124,9 @@
                         <tbody>
                             @foreach($order->orderItems as $item)
                             <tr>
-                                <td>{{ $item->displayName() }}</td>
-                                <td>{{ $item->quantity }}</td>
-                                <td>₱{{ number_format($item->subtotal, 2) }}</td>
+                                <td class="cj-td-title">{{ $item->displayName() }}</td>
+                                <td data-label="Qty">{{ $item->quantity }}</td>
+                                <td data-label="Price">₱{{ number_format($item->subtotal, 2) }}</td>
                             </tr>
                             @endforeach
                         </tbody>

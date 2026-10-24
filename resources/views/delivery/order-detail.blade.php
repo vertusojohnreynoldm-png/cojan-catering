@@ -162,6 +162,10 @@
                 @if($delivery->delivery_note)
                     <p><strong>Note:</strong> {{ $delivery->delivery_note }}</p>
                 @endif
+                @if(!$delivery->proof_photo_path && !$delivery->received_by && !$delivery->delivery_note)
+                    {{-- Deliveries completed before proof photos existed. --}}
+                    <p class="mb-0" style="color:var(--text-light);">No proof photo or note was recorded for this delivery.</p>
+                @endif
             </div>
         </div>
     @elseif($delivery->status !== 'failed')
@@ -366,7 +370,7 @@
         <div class="cj-card-header">Items to Deliver</div>
         <div class="cj-card-body">
             <div class="table-responsive">
-                <table class="cj-table">
+                <table class="cj-table cj-table-stack">
                     <thead>
                         <tr>
                             <th>Item</th>
@@ -377,9 +381,9 @@
                     <tbody>
                         @foreach($delivery->order->orderItems as $item)
                             <tr>
-                                <td>{{ $item->displayName() }}</td>
-                                <td>{{ $item->quantity }}</td>
-                                <td>₱{{ number_format($item->subtotal, 2) }}</td>
+                                <td class="cj-td-title">{{ $item->displayName() }}</td>
+                                <td data-label="Quantity">{{ $item->quantity }}</td>
+                                <td data-label="Price">₱{{ number_format($item->subtotal, 2) }}</td>
                             </tr>
                         @endforeach
                     </tbody>

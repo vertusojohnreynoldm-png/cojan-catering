@@ -65,7 +65,7 @@
                 </div>
             @else
             <div class="table-responsive">
-                <table class="cj-table">
+                <table class="cj-table cj-table-stack">
                     <thead>
                         <tr>
                             <th>Order #</th>
@@ -79,21 +79,23 @@
                     <tbody>
                         @foreach($deliveries as $delivery)
                         <tr>
-                            <td><strong>{{ $delivery->order->order_number }}</strong></td>
-                            <td>{{ $delivery->order->user->name }}</td>
-                            <td>
-                                @if($delivery->order->barangay)
-                                    <span class="badge-cj badge-booking-type">{{ $delivery->order->barangay }}</span><br>
-                                @endif
-                                <small style="color:var(--text-muted);">{{ Str::limit($delivery->order->delivery_address, 30) }}</small>
+                            <td class="cj-td-title"><strong>{{ $delivery->order->order_number }}</strong></td>
+                            <td data-label="Customer">{{ $delivery->order->user->name }}</td>
+                            <td data-label="Address">
+                                <span>
+                                    @if($delivery->order->barangay)
+                                        <span class="badge-cj badge-booking-type">{{ $delivery->order->barangay }}</span><br>
+                                    @endif
+                                    <small style="color:var(--text-muted);">{{ Str::limit($delivery->order->delivery_address, 30) }}</small>
+                                </span>
                             </td>
-                            <td>
+                            <td data-label="Status">
                                 <span class="badge-cj {{ $delivery->status === 'delivered' ? 'badge-delivered' : ($delivery->status === 'failed' ? 'badge-cancelled' : 'badge-pending') }}">
                                     {{ ucfirst(str_replace('_', ' ', $delivery->status)) }}
                                 </span>
                             </td>
-                            <td>{{ $delivery->assigned_at ? $delivery->assigned_at->format('M d, Y') : 'N/A' }}</td>
-                            <td>
+                            <td data-label="Assigned">{{ $delivery->assigned_at ? $delivery->assigned_at->format('M d, Y') : 'N/A' }}</td>
+                            <td data-label="" class="cj-td-actions">
                                 <a href="{{ route('delivery.orders.show', $delivery->id) }}" class="btn-cj btn-cj-sm">View</a>
                             </td>
                         </tr>

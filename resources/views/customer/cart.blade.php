@@ -36,27 +36,33 @@
     <div class="cj-card mt-3">
         <div class="cj-card-body p-0">
             <div class="table-responsive">
-                <table class="cj-table">
+                {{-- Phones (≤640px): each line is a stacked card (cj-table-stack). --}}
+                <table class="cj-table cj-table-stack">
                     <thead>
                         <tr>
                             <th>Item</th>
                             <th>Price</th>
                             <th>Qty</th>
                             <th>Subtotal</th>
-                            <th></th>
+                            <th><span class="visually-hidden">Remove</span></th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($cart as $id => $item)
                         <tr>
-                            <td>
-                                <strong>{{ $item['name'] }}</strong>
-                                @if(($item['type'] ?? 'menu') === 'package')
-                                    <br><small style="color:var(--text-light);">{{ $item['pax'] }} pax package</small>
+                            <td class="cj-td-title">
+                                @if(!empty($item['image']))
+                                    <img src="{{ asset('storage/' . $item['image']) }}" alt="" class="cj-td-thumb">
                                 @endif
+                                <span>
+                                    <strong>{{ $item['name'] }}</strong>
+                                    @if(($item['type'] ?? 'menu') === 'package')
+                                        <br><small style="color:var(--text-light);">{{ $item['pax'] }} pax package</small>
+                                    @endif
+                                </span>
                             </td>
-                            <td>₱{{ number_format($item['price'], 2) }}</td>
-                            <td>
+                            <td data-label="Price">₱{{ number_format($item['price'], 2) }}</td>
+                            <td data-label="Qty">
                                 <form method="POST" action="{{ route('customer.cart.update', $id) }}">
                                     @csrf
                                     <x-qty-stepper :value="$item['quantity']"
@@ -65,10 +71,10 @@
                                                    :label="'Quantity of ' . $item['name']" />
                                 </form>
                             </td>
-                            <td>₱{{ number_format($item['price'] * $item['quantity'], 2) }}</td>
-                            <td>
-                                <a href="{{ route('customer.cart.remove', $id) }}"
-                                   style="color:var(--danger);font-size:.85rem;text-decoration:none;">✕ Remove</a>
+                            <td data-label="Subtotal"><strong>₱{{ number_format($item['price'] * $item['quantity'], 2) }}</strong></td>
+                            <td data-label="" class="cj-td-actions">
+                                <a href="{{ route('customer.cart.remove', $id) }}" class="cj-remove-link"
+                                   aria-label="Remove {{ $item['name'] }}">✕ Remove</a>
                             </td>
                         </tr>
                         @endforeach
@@ -97,9 +103,7 @@
     </div>
 
     <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap gap-2">
-        <a href="{{ route('customer.cart.clear') }}"
-           style="color:var(--danger);border:1.5px solid var(--danger);border-radius:var(--radius-base);
-                  padding:8px 18px;text-decoration:none;font-size:var(--fs-sm);">
+        <a href="{{ route('customer.cart.clear') }}" class="cj-clear-cart">
             🗑 Clear Cart
         </a>
         @if(auth()->user()->isBlocked())

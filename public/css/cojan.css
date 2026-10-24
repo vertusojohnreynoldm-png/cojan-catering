@@ -278,13 +278,14 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
 .cj-table tbody tr { border-bottom: 1px solid rgba(122,46,29,.07); transition: var(--transition); }
 .cj-table tbody tr:hover { background: var(--green-light); }
 .cj-table tbody td { padding: .75rem 1rem; vertical-align: middle; }
+.cj-table tfoot td { padding: .5rem 1rem; vertical-align: middle; }
 
 /* ── BADGES ── */
 .badge-cj {
   display: inline-block;
   padding: .25rem .65rem;
   border-radius: 100px;
-  font-size: .74rem;
+  font-size: var(--fs-xs);
   font-weight: 600;
   letter-spacing: .03em;
 }
@@ -622,7 +623,7 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
 .track-circle.done { background: var(--green-dark); color: #fff; }
 .track-circle.current { background: var(--green-mid); color: #fff; }
 .track-circle.pending { background: #f0f0f0; color: var(--text-muted); border: 2px solid #ddd; }
-.track-label { font-size: .72rem; text-align: center; color: var(--text-light); max-width: 60px; }
+.track-label { font-size: var(--fs-xs); text-align: center; color: var(--text-light); max-width: 60px; }
 .track-label.done { color: var(--green-dark); font-weight: 600; }
 .track-line { flex-grow: 1; height: 3px; background: #ddd; margin-top: -1.75rem; position: relative; top: 20px; z-index: 0; }
 .track-line.done { background: var(--green-dark); }
@@ -633,9 +634,14 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
   0%, 100% { box-shadow: 0 0 0 0 rgba(193,68,30,.45); }
   50%      { box-shadow: 0 0 0 10px rgba(193,68,30,0); }
 }
+/* Phones: five steps don't fit side by side at a readable size, so the
+   timeline runs top to bottom — circle, then label, joined by short lines. */
 @media (max-width: 480px) {
-  .track-circle { width: 32px; height: 32px; font-size: .75rem; }
-  .track-label { font-size: .65rem; max-width: 48px; }
+  .cj-timeline { flex-direction: column; align-items: stretch; }
+  .track-step { flex-direction: row; gap: var(--space-3); flex: none; }
+  .track-circle { width: 32px; height: 32px; font-size: .75rem; margin-bottom: 0; }
+  .track-label { font-size: var(--fs-sm); text-align: left; max-width: none; }
+  .track-line { flex: none; width: 3px; height: 14px; margin: 2px 0 2px 14.5px; top: 0; }
 }
 
 /* ── FOOTER ── */
@@ -764,7 +770,7 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
 }
 .cj-stepper-input:focus { outline: 2px solid var(--green-dark); outline-offset: -2px; }
 .cj-stepper-input:disabled { color: var(--text-muted); background: var(--white); }
-.cj-qty-msg { font-size: var(--fs-xs, .75rem); color: var(--required); line-height: 1.3; }
+.cj-qty-msg { font-size: var(--fs-xs); color: var(--required); line-height: 1.3; }
 .menu-card-actions { display: flex; flex-wrap: wrap; gap: .5rem; align-items: flex-start; }
 .menu-card-actions .menu-card-btn { flex: 1 1 7rem; min-height: 28px; }
 
@@ -1065,6 +1071,23 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
   }
   .cj-table-stack tbody td[data-label=""]::before { content: none; }
   .cj-table-stack tbody td.cj-td-actions { justify-content: flex-start; flex-wrap: wrap; padding-top: var(--space-2); }
+  .cj-table-stack tbody tr:hover { background: transparent; }
+  /* The card's heading cell (item name, order number): no label, left-aligned. */
+  .cj-table-stack tbody td.cj-td-title { justify-content: flex-start; text-align: left; font-size: var(--fs-base); padding-bottom: var(--space-2); }
+  .cj-table-stack tbody td.cj-td-title::before { content: none; }
+  /* Totals rows: "Subtotal ........ ₱300.00" */
+  .cj-table-stack tfoot { display: block; width: 100%; }
+  .cj-table-stack tfoot tr { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-2) var(--space-4); }
+  .cj-table-stack tfoot td { display: block; width: auto; padding: 0; text-align: left !important; }
+  .cj-table-stack tfoot td:empty { display: none; }
+}
+/* Small image beside a stacked card's title — phones only, desktop tables unchanged. */
+.cj-td-thumb { display: none; }
+@media (max-width: 640px) {
+  .cj-td-thumb {
+    display: block; flex: 0 0 auto; width: 48px; height: 48px; border-radius: var(--radius-sm);
+    object-fit: cover; background: var(--cream); margin-right: var(--space-3);
+  }
 }
 .cj-flag-option {
   display: flex;
@@ -1324,3 +1347,36 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
   .cj-pstep + .cj-pstep::before { top: 18px; }
 }
 @media (prefers-reduced-motion: reduce) { .cj-progress-waiting-dot { animation: none; } }
+
+/* ── MOBILE PASS: customer + rider screens ──
+   Tap targets of at least 44px and readable (≥12px) text on phones. Where a
+   bigger hit area would shift the layout (breadcrumbs), padding is cancelled
+   by an equal negative margin, so the text stays where it was. */
+.cj-nav-brand { display: inline-block; line-height: 44px; }
+.cj-remove-link { color: var(--danger); font-size: .85rem; text-decoration: none; }
+.cj-remove-link:hover { text-decoration: underline; }
+.cj-clear-cart {
+  display: inline-flex; align-items: center; gap: .35rem;
+  color: var(--danger); border: 1.5px solid var(--danger); border-radius: var(--radius-base);
+  padding: 8px 18px; text-decoration: none; font-size: var(--fs-sm);
+}
+@media (max-width: 768px) {
+  .cj-breadcrumb { font-size: var(--fs-sm); }
+  .cj-breadcrumb-link { display: inline-block; padding: 14px 6px; margin: -14px -6px; }
+  .cj-remove-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 .5rem; margin-left: -.5rem; font-size: var(--fs-sm); }
+  .cj-clear-cart { min-height: 44px; }
+  .cj-footer ul { padding-left: 0; margin-bottom: 0; }
+  .cj-footer li a { display: inline-flex; align-items: center; min-height: 44px; min-width: 44px; }
+  .cj-footer-social a { width: 44px; height: 44px; }
+  /* Shared modal close (×): Bootstrap's is ~24px. */
+  .modal-header .btn-close {
+    width: 44px; height: 44px; padding: 0; box-sizing: border-box;
+    margin: -.5rem -.5rem -.5rem auto; background-size: 14px;
+  }
+}
+@media (max-width: 640px) {
+  .cj-table-stack .cj-td-actions .btn-cj { flex: 1 1 auto; justify-content: center; }
+}
+/* Order QR (a fixed 300×300 SVG): shrinks to fit narrow phones. */
+.cj-order-qr { max-width: 100%; box-sizing: border-box; }
+.cj-order-qr svg { display: block; max-width: 100%; height: auto; }

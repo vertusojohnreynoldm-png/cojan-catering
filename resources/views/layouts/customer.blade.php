@@ -28,6 +28,10 @@
             display: none;
             flex-direction: column;
             gap: 5px;
+            align-items: center;
+            justify-content: center;
+            min-width: 44px;
+            min-height: 44px;
             cursor: pointer;
             padding: 8px;
             background: none;

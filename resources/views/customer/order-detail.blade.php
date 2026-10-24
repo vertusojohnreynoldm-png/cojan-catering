@@ -89,6 +89,7 @@
             <div class="cj-card-body text-center py-4">
                 @if($order->qr_code)
                     <div role="img" aria-label="QR code to track order {{ $order->order_number }}"
+                         class="cj-order-qr"
                          style="display:inline-block;padding:16px;background:#fff;
                                 border-radius:var(--radius-md);box-shadow:0 2px 12px rgba(0,0,0,0.08);">
                         <div aria-hidden="true">{!! $order->qr_code !!}</div>
@@ -110,7 +111,7 @@
             <div class="cj-card-header">Order Items</div>
             <div class="cj-card-body p-0">
                 <div class="table-responsive">
-                    <table class="cj-table">
+                    <table class="cj-table cj-table-stack">
                         <thead>
                             <tr>
                                 <th>Item</th>
@@ -122,10 +123,10 @@
                         <tbody>
                             @foreach($order->orderItems as $item)
                             <tr>
-                                <td>{{ $item->displayName() }}</td>
-                                <td>₱{{ number_format($item->unit_price, 2) }}</td>
-                                <td>{{ $item->quantity }}</td>
-                                <td>₱{{ number_format($item->subtotal, 2) }}</td>
+                                <td class="cj-td-title">{{ $item->displayName() }}</td>
+                                <td data-label="Price">₱{{ number_format($item->unit_price, 2) }}</td>
+                                <td data-label="Qty">{{ $item->quantity }}</td>
+                                <td data-label="Subtotal">₱{{ number_format($item->subtotal, 2) }}</td>
                             </tr>
                             @endforeach
                         </tbody>
