@@ -42,6 +42,14 @@
                     <span class="cj-route-note" id="route-note">Finding your location…</span>
                 </div>
 
+                {{-- Live-sharing status: one line the rider can glance at,
+                     plus any permission / GPS problem with how to fix it. --}}
+                <div class="cj-share-status" id="share-status" aria-live="polite">
+                    <span class="cj-share-pill" id="share-pill">Starting GPS…</span>
+                    <span class="cj-share-meta" id="share-meta"></span>
+                </div>
+                <div class="cj-share-help" id="share-help" role="alert" hidden></div>
+
                 <a href="{{ $nav['google'] }}" target="_blank" rel="noopener" class="cj-navigate-btn">
                     <i class="bi bi-cursor-fill" aria-hidden="true"></i> Navigate
                     <small>Google Maps</small>
@@ -407,205 +415,116 @@
     </a>
 </div>
 
-@if(in_array($delivery->status, ['picked_up', 'in_transit']))
-<div id="location-status" class="alert-cj mt-2" style="display:none;max-width:600px;"></div>
-<p id="gps-accuracy-status" class="mt-2" style="display:none;max-width:600px;font-size:.85rem;font-weight:600;"></p>
-<script>
-(function () {
-    const deliveryId = {{ $delivery->id }};
-    const statusEl = document.getElementById('location-status');
-    const accuracyEl = document.getElementById('gps-accuracy-status');
-    const THROTTLE_MS = 7000;
-    const GOOD_ACCURACY_M = 100;   // readings at/under this are considered a real GPS lock
-    const HARD_REJECT_M = 5000;    // readings worse than this are almost certainly an IP-based guess — always ignored
-    const GRACE_PERIOD_MS = 30000; // avoids sending the rough Wi-Fi/IP guess before GPS locks on
-    const PAGE_LOAD_TIME = Date.now();
-
-    let lastSent = 0;
-    let watchId = null;
-    let locked = false;     // true once we've either seen a good fix or timed out the grace period
-    let bestSoFar = null;   // { lat, lng, accuracy } — best reading seen during the grace period
-
-    function showStatus(message, isError) {
-        if (!statusEl) return;
-        statusEl.textContent = message;
-        statusEl.className = 'alert-cj mt-2 ' + (isError ? 'alert-danger' : 'alert-info');
-        statusEl.style.display = 'block';
-    }
-
-    function updateAccuracyStatus(accuracy) {
-        if (!accuracyEl) return;
-        const rounded = Math.round(accuracy);
-        if (accuracy <= GOOD_ACCURACY_M) {
-            accuracyEl.textContent = `GPS accuracy: ±${rounded} m`;
-            accuracyEl.style.color = '#15803d';
-        } else {
-            accuracyEl.textContent = `Waiting for a better GPS signal (±${rounded} m)... try going outside or enabling precise location.`;
-            // Matches --status-amber-text in cojan.css (same "pending/warning"
-            // status color) — literal here since this is inline JS, not CSS.
-            accuracyEl.style.color = '#92400e';
-        }
-        accuracyEl.style.display = 'block';
-    }
-
-    function sendLocation(lat, lng, accuracy) {
-        fetch(`{{ url('/delivery/orders') }}/${deliveryId}/location`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-            },
-            body: JSON.stringify({ lat, lng, accuracy }),
-        }).catch(() => { /* transient network failure — the next watchPosition tick retries */ });
-    }
-
-    function maybeSend(lat, lng, accuracy) {
-        const now = Date.now();
-        if (now - lastSent < THROTTLE_MS) return;
-        lastSent = now;
-        sendLocation(lat, lng, accuracy);
-    }
-
-    // Independent safety net: if readings arrive sparsely enough that no
-    // watchPosition callback happens to land right at the 30s mark, this
-    // still forces the transition on schedule rather than leaving the rider
-    // waiting indefinitely for a fix that may never fully lock on.
-    setTimeout(() => {
-        if (!locked && bestSoFar) {
-            locked = true;
-            maybeSend(bestSoFar.lat, bestSoFar.lng, bestSoFar.accuracy);
-        }
-    }, GRACE_PERIOD_MS);
-
-    if (!navigator.geolocation) {
-        showStatus('Live location sharing is not supported on this device/browser — the customer won\'t see live tracking for this delivery.', true);
-    } else {
-        watchId = navigator.geolocation.watchPosition(
-            (position) => {
-                statusEl.style.display = 'none';
-
-                const accuracy = position.coords.accuracy;
-                const lat = position.coords.latitude;
-                const lng = position.coords.longitude;
-
-                updateAccuracyStatus(accuracy);
-
-                if (accuracy > HARD_REJECT_M) {
-                    return; // near-certain IP-based guess — ignored outright, grace period or not
-                }
-
-                if (locked) {
-                    maybeSend(lat, lng, accuracy);
-                    return;
-                }
-
-                if (accuracy <= GOOD_ACCURACY_M) {
-                    locked = true;
-                    maybeSend(lat, lng, accuracy);
-                    return;
-                }
-
-                // Still within the grace period with no good fix yet — track the
-                // best reading in case the window times out before one arrives.
-                if (!bestSoFar || accuracy < bestSoFar.accuracy) {
-                    bestSoFar = { lat, lng, accuracy };
-                }
-
-                if (Date.now() - PAGE_LOAD_TIME >= GRACE_PERIOD_MS) {
-                    locked = true;
-                    maybeSend(bestSoFar.lat, bestSoFar.lng, bestSoFar.accuracy);
-                }
-            },
-            (error) => {
-                if (error.code === error.PERMISSION_DENIED) {
-                    showStatus('Location sharing is off — please allow location access in your browser so the customer can see live tracking.', true);
-                } else {
-                    showStatus('Having trouble getting your location right now — live tracking may be delayed, but the rest of the delivery still works normally.', true);
-                }
-            },
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 }
-        );
-    }
-
-    window.addEventListener('beforeunload', () => {
-        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
-    });
-
-    // Keep the screen awake so the phone doesn't lock and pause location
-    // updates. Best-effort only — silently skipped if unsupported or denied.
-    let wakeLock = null;
-
-    async function requestWakeLock() {
-        if (!('wakeLock' in navigator)) return;
-        try {
-            wakeLock = await navigator.wakeLock.request('screen');
-        } catch (e) {
-            // Unsupported, denied, or the tab isn't visible — not critical, skip silently.
-        }
-    }
-
-    requestWakeLock();
-
-    document.addEventListener('visibilitychange', () => {
-        if (document.visibilityState === 'visible') {
-            requestWakeLock();
-        }
-    });
-})();
-</script>
-@endif
-
 @if($nav)
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
-/* Rider navigation map. The customer's pin comes from the server-rendered
-   $nav (only present for an active menu delivery); the road route comes
-   from GET /delivery/orders/{id}/route, which the server computes from the
-   rider's position sent here and the order's pin (never from this page).
-   Re-routes only after drifting ~50 m off the drawn line or every 60 s. */
+/* Rider GPS — ONE watcher feeding three things (menu orders only; this
+   block only renders for an active menu delivery):
+     1. the map: smooth-moving rider marker pointed by heading;
+     2. the route: re-requested after ~50 m off-route or every 60 s
+        (GET delivery.orders.route — the server uses the order's pin);
+     3. live sharing to the customer: POST delivery.orders.location every
+        10 s or after 20 m of movement (never closer than 3 s apart), only
+        while Picked Up / In Transit. If the server answers with stop:true
+        (delivered, failed or cancelled) the watch is cleared, the screen
+        wake lock released and sharing ends for good.
+   Readings worse than 100 m are ignored after the first fix; before it, a
+   30 s grace period accepts the best rough fix so the map isn't empty. */
 (function () {
-    const ROUTE_URL = @json(route('delivery.orders.route', $delivery->id));
+    {{-- Js::from, not @json: @json splits its argument on commas. --}}
+    const ROUTE_URL = {{ \Illuminate\Support\Js::from(route('delivery.orders.route', $delivery->id)) }};
+    const LOCATION_URL = {{ \Illuminate\Support\Js::from(route('delivery.orders.location', $delivery->id)) }};
+    const CSRF = document.querySelector('meta[name="csrf-token"]').content;
+    const SHARING = {{ in_array($delivery->status, ['picked_up', 'in_transit'], true) ? 'true' : 'false' }};
     const dest = [{{ $nav['lat'] }}, {{ $nav['lng'] }}];
-    const OFF_ROUTE_M = 50;
-    const REFRESH_MS = 60000;
-    const distEl = document.getElementById('route-distance');
-    const etaEl = document.getElementById('route-eta');
-    const noteEl = document.getElementById('route-note');
-    const mapEl = document.getElementById('rider-map');
 
-    if (!window.L) {
-        mapEl.style.display = 'none';
-        noteEl.textContent = 'The map could not load — use the Navigate button.';
-        return;
+    const SEND_EVERY_MS = 10000, MIN_GAP_MS = 3000, SEND_AFTER_M = 20;
+    const GOOD_ACCURACY_M = 100, HARD_REJECT_M = 5000, GRACE_MS = 30000;
+    const OFF_ROUTE_M = 50, ROUTE_EVERY_MS = 60000, ANIMATE_MS = 900;
+    const startedAt = Date.now();
+
+    const $ = (id) => document.getElementById(id);
+    const distEl = $('route-distance'), etaEl = $('route-eta'), noteEl = $('route-note');
+    const pill = $('share-pill'), meta = $('share-meta'), help = $('share-help');
+
+    // ---- small helpers ----------------------------------------------------
+    const toRad = (d) => d * Math.PI / 180;
+    function metres(a, b) {
+        const dLat = toRad(b[0] - a[0]), dLng = toRad(b[1] - a[1]);
+        const h = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.sin(dLng / 2) ** 2;
+        return 2 * 6371000 * Math.asin(Math.min(1, Math.sqrt(h)));
     }
-
-    const map = L.map(mapEl, { zoomControl: true, scrollWheelZoom: false }).setView(dest, 16);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors', maxZoom: 19,
-    }).addTo(map);
-
-    L.marker(dest, {
-        icon: L.divIcon({ className: 'cj-pin-icon', html: '<span></span>', iconSize: [34, 44], iconAnchor: [17, 42] }),
-        title: 'Customer location',
-    }).addTo(map);
-
-    let riderMarker = null;
-    let accuracyCircle = null;
-    let routeLine = null;
-    let routePoints = [];
-    let lastRouteAt = 0;
-    let inFlight = false;
-    let fitted = false;
-    let blockedUntil = 0;
-
+    function bearing(a, b) {
+        const y = Math.sin(toRad(b[1] - a[1])) * Math.cos(toRad(b[0]));
+        const x = Math.cos(toRad(a[0])) * Math.sin(toRad(b[0])) - Math.sin(toRad(a[0])) * Math.cos(toRad(b[0])) * Math.cos(toRad(b[1] - a[1]));
+        return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
     const fmtDistance = (m) => m >= 1000 ? (m / 1000).toFixed(m >= 10000 ? 0 : 1) + ' km' : Math.round(m / 10) * 10 + ' m';
     const fmtEta = (s) => s < 60 ? '< 1 min' : (s < 3600 ? Math.round(s / 60) + ' min' : Math.floor(s / 3600) + ' h ' + Math.round((s % 3600) / 60) + ' min');
 
-    // Metres from point p to the drawn route (equirectangular — plenty
-    // accurate over a few km).
+    function setPill(text, tone) { pill.textContent = text; pill.className = 'cj-share-pill ' + (tone || ''); }
+    function setHelp(html) { help.hidden = !html; help.innerHTML = html || ''; }
+
+    // ---- map ----------------------------------------------------------------
+    let map = null;
+    if (window.L) {
+        map = L.map('rider-map', { scrollWheelZoom: false }).setView(dest, 16);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
+        L.marker(dest, {
+            icon: L.divIcon({ className: 'cj-pin-icon', html: '<span></span>', iconSize: [34, 44], iconAnchor: [17, 42] }),
+            title: 'Customer location',
+        }).addTo(map);
+        setTimeout(() => map.invalidateSize(), 200);
+    } else {
+        $('rider-map').style.display = 'none';
+        noteEl.textContent = 'The map could not load — use the Navigate button.';
+    }
+
+    let riderMarker = null, accuracyCircle = null, shown = null, animFrame = 0, heading = null, lastPos = null;
+
+    function riderIcon() {
+        return L.divIcon({ className: 'cj-rider-marker', html: '<span class="cj-rider-dot2"></span><span class="cj-rider-arrow"></span>', iconSize: [36, 36], iconAnchor: [18, 18] });
+    }
+    function applyHeading() {
+        const el = riderMarker && riderMarker.getElement();
+        if (!el) return;
+        el.classList.toggle('has-heading', heading !== null);
+        if (heading !== null) el.querySelector('.cj-rider-arrow').style.transform = `rotate(${heading}deg)`;
+    }
+    // Glide from where the marker is to the new fix instead of jumping.
+    function moveRider(to, accuracy) {
+        if (!map) return;
+        if (!riderMarker) {
+            riderMarker = L.marker(to, { icon: riderIcon(), title: 'You', zIndexOffset: 1000, keyboard: false }).addTo(map);
+            accuracyCircle = L.circle(to, { radius: accuracy, color: '#2563eb', weight: 1, fillOpacity: .08 }).addTo(map);
+            shown = to;
+            applyHeading();
+            // Frame rider + customer right away; the route refits when it arrives.
+            if (!fitted) map.fitBounds(L.latLngBounds([to, dest]).pad(0.25));
+            return;
+        }
+        accuracyCircle.setRadius(accuracy);
+        cancelAnimationFrame(animFrame);
+        const from = shown, t0 = performance.now();
+        const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const step = (now) => {
+            const k = reduce ? 1 : Math.min(1, (now - t0) / ANIMATE_MS);
+            const e = k < .5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2; // ease in-out
+            shown = [from[0] + (to[0] - from[0]) * e, from[1] + (to[1] - from[1]) * e];
+            riderMarker.setLatLng(shown);
+            accuracyCircle.setLatLng(shown);
+            if (k < 1) animFrame = requestAnimationFrame(step);
+        };
+        animFrame = requestAnimationFrame(step);
+        applyHeading();
+    }
+
+    // ---- route ----------------------------------------------------------------
+    let routeLine = null, routePoints = [], lastRouteAt = 0, routeInFlight = false, routeBlockedUntil = 0, fitted = false;
+
     function distanceToRoute(p) {
         if (routePoints.length < 2) return Infinity;
-        const k = 111320, cos = Math.cos(p[0] * Math.PI / 180);
+        const k = 111320, cos = Math.cos(toRad(p[0]));
         const xy = (q) => [(q[1] - p[1]) * k * cos, (q[0] - p[0]) * k];
         let best = Infinity;
         for (let i = 1; i < routePoints.length; i++) {
@@ -616,9 +535,9 @@
         }
         return best;
     }
-
     function drawRoute(data) {
         routePoints = data.geometry;
+        if (!map) return;
         if (routeLine) map.removeLayer(routeLine);
         routeLine = L.polyline(routePoints, data.fallback
             ? { color: '#C1441E', weight: 4, opacity: .8, dashArray: '8 10' }
@@ -629,67 +548,169 @@
             ? 'Road route unavailable — straight-line distance shown. Use Navigate for turn-by-turn.'
             : 'Road route · updates as you move';
         noteEl.classList.toggle('warn', !!data.fallback);
-        if (!fitted) {
-            map.fitBounds(L.latLngBounds(routePoints).pad(0.15));
-            fitted = true;
-        }
+        if (!fitted) { map.fitBounds(L.latLngBounds(routePoints).pad(0.15)); fitted = true; }
     }
-
-    async function requestRoute(pos) {
-        if (inFlight || Date.now() < blockedUntil) return;
-        inFlight = true;
+    async function maybeRoute(pos) {
+        if (routeInFlight || Date.now() < routeBlockedUntil) return;
+        if (routeLine && Date.now() - lastRouteAt < ROUTE_EVERY_MS && distanceToRoute(pos) <= OFF_ROUTE_M) return;
+        routeInFlight = true;
         lastRouteAt = Date.now();
         try {
             const resp = await fetch(`${ROUTE_URL}?lat=${pos[0]}&lng=${pos[1]}`, { headers: { 'Accept': 'application/json' } });
-            if (resp.status === 429) {
-                blockedUntil = Date.now() + REFRESH_MS; // keep the current route; try again later
-            } else if (resp.status === 403) {
-                noteEl.textContent = 'This delivery is no longer active — navigation is off.';
-                blockedUntil = Infinity;
-            } else if (resp.ok) {
-                drawRoute(await resp.json());
-            }
+            if (resp.status === 429) routeBlockedUntil = Date.now() + ROUTE_EVERY_MS;
+            else if (resp.status === 403) { routeBlockedUntil = Infinity; noteEl.textContent = 'This delivery is no longer active — navigation is off.'; }
+            else if (resp.ok) drawRoute(await resp.json());
         } catch (e) {
             noteEl.textContent = 'No connection — showing the last route. Navigate still works.';
         } finally {
-            inFlight = false;
+            routeInFlight = false;
         }
     }
+
+    // ---- live sharing ----------------------------------------------------------
+    let watchId = null, stopped = false, lastSent = null, lastSentAt = 0, sending = false;
+
+    function maybeSend(pos, accuracy, speed) {
+        if (!SHARING || stopped || sending) return;
+        const now = Date.now();
+        const due = !lastSent
+            || now - lastSentAt >= SEND_EVERY_MS
+            || (metres(lastSent, pos) >= SEND_AFTER_M && now - lastSentAt >= MIN_GAP_MS);
+        if (!due) return;
+        sending = true;
+        lastSent = pos;
+        lastSentAt = now;
+        fetch(LOCATION_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json', 'X-CSRF-TOKEN': CSRF },
+            body: JSON.stringify({
+                lat: pos[0], lng: pos[1], accuracy: Math.round(accuracy),
+                heading: heading === null ? null : Math.round(heading),
+                speed: speed === null || isNaN(speed) ? null : Math.round(speed * 10) / 10,
+            }),
+        }).then(async (resp) => {
+            const body = await resp.json().catch(() => ({}));
+            if (body.stop) { stopSharing(body.message || 'Location sharing has stopped.'); return; }
+            if (resp.ok) setPill('Live location ON', 'on');
+        }).catch(() => {
+            setPill('Live location ON — reconnecting…', 'warn'); // next fix retries
+        }).finally(() => { sending = false; });
+    }
+
+    function stopSharing(message) {
+        stopped = true;
+        if (watchId !== null && navigator.geolocation) navigator.geolocation.clearWatch(watchId);
+        watchId = null;
+        releaseWakeLock();
+        setPill('Sharing stopped', 'off');
+        meta.textContent = '';
+        setHelp(message + ' You can close this page.');
+        routeBlockedUntil = Infinity;
+    }
+
+    // "Last shared 4 s ago · ±12 m" — ticks every second.
+    let lastAccuracy = null;
+    setInterval(() => {
+        if (stopped) return;
+        const bits = [];
+        if (SHARING && lastSentAt) bits.push('Last shared ' + Math.max(0, Math.round((Date.now() - lastSentAt) / 1000)) + ' s ago');
+        if (lastAccuracy !== null) bits.push('±' + Math.round(lastAccuracy) + ' m');
+        meta.textContent = bits.join(' · ');
+    }, 1000);
+
+    // ---- one watcher ------------------------------------------------------------
+    let firstFix = false, bestRough = null;
 
     function onPosition(p) {
-        const pos = [p.coords.latitude, p.coords.longitude];
-        if (!riderMarker) {
-            riderMarker = L.marker(pos, {
-                icon: L.divIcon({ className: 'cj-rider-dot', html: '<span></span>', iconSize: [22, 22], iconAnchor: [11, 11] }),
-                title: 'You', zIndexOffset: 1000,
-            }).addTo(map);
-            accuracyCircle = L.circle(pos, { radius: p.coords.accuracy || 0, color: '#2563eb', weight: 1, fillOpacity: .08 }).addTo(map);
-        } else {
-            riderMarker.setLatLng(pos);
-            accuracyCircle.setLatLng(pos).setRadius(p.coords.accuracy || 0);
+        if (stopped) return;
+        setHelp('');
+        const c = p.coords, acc = c.accuracy, pos = [c.latitude, c.longitude];
+        lastAccuracy = acc;
+        if (acc > HARD_REJECT_M) return; // an IP/Wi-Fi guess, never GPS
+
+        if (!firstFix) {
+            if (acc <= GOOD_ACCURACY_M) {
+                firstFix = true;
+            } else {
+                if (!bestRough || acc < bestRough.acc) bestRough = { pos, acc };
+                if (Date.now() - startedAt < GRACE_MS) {
+                    setPill('Waiting for a better GPS signal…', 'warn');
+                    moveRider(bestRough.pos, bestRough.acc);
+                    return;
+                }
+                firstFix = true; // grace period over: go with the best rough fix
+            }
+        } else if (acc > GOOD_ACCURACY_M) {
+            setPill(SHARING ? 'Live location ON — weak signal, waiting' : 'Weak GPS signal', 'warn');
+            return; // after the first fix, inaccurate readings are ignored
         }
 
-        if (!routeLine || Date.now() - lastRouteAt > REFRESH_MS || distanceToRoute(pos) > OFF_ROUTE_M) {
-            requestRoute(pos);
-        }
+        // Heading: the phone's own when moving, else the direction between fixes.
+        const speed = c.speed;
+        if (c.heading !== null && c.heading !== undefined && !isNaN(c.heading) && speed > 0.5) heading = c.heading;
+        else if (lastPos && metres(lastPos, pos) >= 8) heading = bearing(lastPos, pos);
+        lastPos = pos;
+
+        if (!SHARING) setPill('Not sharing yet — mark the order Picked Up to start', 'warn');
+        else if (!lastSentAt) setPill('Live location ON', 'on');
+
+        moveRider(pos, Math.min(acc, GOOD_ACCURACY_M));
+        maybeRoute(pos);
+        maybeSend(pos, acc, speed);
     }
+
+    const HOW_TO_ALLOW = '<strong>To turn it on:</strong> Android (Chrome): tap the ⓘ or lock icon left of the address → Permissions → Location → Allow. '
+        + 'iPhone (Safari): Settings → Privacy &amp; Security → Location Services → Safari Websites → While Using the App. Then reload this page.';
 
     function onError(err) {
-        noteEl.classList.add('warn');
-        noteEl.textContent = !window.isSecureContext
-            ? 'Location needs a secure (https) page — the customer\'s pin is shown; use Navigate for directions.'
-            : (err && err.code === 1
-                ? 'Location is blocked — allow it (tap the lock/ⓘ in the address bar → Location → Allow) to see your route. Navigate still works.'
-                : 'Can\'t get your location — turn on GPS/Location to see your route. Navigate still works.');
+        if (stopped) return;
+        if (err.code === 1) {
+            releaseWakeLock(); // nothing to share, so don't hold the screen on
+            setPill('Location blocked', 'off');
+            setHelp('Location access is blocked, so the customer can\'t see you coming. ' + HOW_TO_ALLOW);
+            noteEl.textContent = 'Turn on location to see your route. Navigate still works.';
+        } else if (err.code === 2) {
+            setPill('GPS is off', 'off');
+            setHelp('Your phone can\'t get a location — turn on <strong>Location / GPS</strong> in your quick settings, then wait a few seconds.');
+        } else {
+            setPill('Still looking for GPS…', 'warn'); // timeout: watchPosition keeps trying
+        }
     }
 
-    if (!navigator.geolocation || !window.isSecureContext) {
-        onError(null);
+    // ---- screen wake lock (best effort) --------------------------------------------
+    let wakeLock = null;
+    async function requestWakeLock() {
+        if (!SHARING || stopped || !('wakeLock' in navigator)) return;
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+        } catch (e) { /* denied or tab hidden — fine */ }
+    }
+    function releaseWakeLock() {
+        if (wakeLock) wakeLock.release().catch(() => {});
+        wakeLock = null;
+    }
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') requestWakeLock();
+    });
+
+    // ---- start ------------------------------------------------------------------------
+    if (!window.isSecureContext) {
+        setPill('Location unavailable', 'off');
+        setHelp('Location only works on a secure (https) page. The customer\'s pin is shown — use <strong>Navigate</strong> for directions.');
+    } else if (!navigator.geolocation) {
+        setPill('Location unavailable', 'off');
+        setHelp('This browser can\'t share location. Use <strong>Navigate</strong> for directions.');
     } else {
-        navigator.geolocation.watchPosition(onPosition, onError, { enableHighAccuracy: true, maximumAge: 5000, timeout: 20000 });
+        watchId = navigator.geolocation.watchPosition(onPosition, onError, { enableHighAccuracy: true, maximumAge: 0, timeout: 20000 });
+        requestWakeLock();
+        if (SHARING && !('wakeLock' in navigator)) {
+            setHelp('Keep this screen open while delivering — your phone may stop sharing your location if it locks.');
+        }
     }
-
-    setTimeout(() => map.invalidateSize(), 200);
+    window.addEventListener('pagehide', () => {
+        if (watchId !== null) navigator.geolocation.clearWatch(watchId);
+        releaseWakeLock();
+    });
 })();
 </script>
 @endif

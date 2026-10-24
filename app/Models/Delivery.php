@@ -23,6 +23,8 @@ class Delivery extends Model
         'current_lat',
         'current_lng',
         'current_accuracy',
+        'current_heading',
+        'current_speed',
         'last_location_update',
         'proof_photo_path',
         'received_by',

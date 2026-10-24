@@ -33,6 +33,8 @@ class DeliveryLocationUpdated implements ShouldBroadcastNow
             'lat'        => $this->delivery->current_lat,
             'lng'        => $this->delivery->current_lng,
             'accuracy'   => $this->delivery->current_accuracy,
+            'heading'    => $this->delivery->current_heading !== null ? (float) $this->delivery->current_heading : null,
+            'speed'      => $this->delivery->current_speed !== null ? (float) $this->delivery->current_speed : null,
             'updated_at' => $this->delivery->last_location_update?->toIso8601String(),
         ];
     }

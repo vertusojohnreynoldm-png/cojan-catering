@@ -1155,7 +1155,7 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
    Phone-first: the map takes most of the first screen and Navigate is a
    full-width 56px button reachable with a thumb. */
 .cj-rider-nav { overflow: hidden; }
-.cj-rider-map { height: 420px; z-index: 0; }
+.cj-rider-map { height: 380px; z-index: 0; }
 .cj-route-summary { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem 1rem; margin-bottom: var(--space-3); }
 .cj-route-figure { font-size: var(--fs-md); color: var(--green-dark); }
 .cj-route-figure .bi { color: var(--text-light); margin-right: .15rem; }
@@ -1203,3 +1203,45 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
   .cj-rider-nav .cj-card-body { padding: var(--space-3); }
 }
 .cj-admin-pin-map { height: 200px; border-radius: var(--radius-base); border: 1px solid rgba(122,46,29,.15); z-index: 0; }
+
+/* ── RIDER LIVE SHARING (Stage C) ── */
+.cj-share-status { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem .6rem; margin-bottom: var(--space-3); }
+.cj-share-pill {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .3rem .7rem; border-radius: 100px;
+  font-size: var(--fs-xs); font-weight: 700;
+  background: var(--status-blue-bg); color: var(--status-blue-text);
+}
+.cj-share-pill::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.cj-share-pill.on   { background: var(--status-green-bg); color: var(--status-green-text); }
+.cj-share-pill.on::before { animation: cjLivePulse 1.6s ease-in-out infinite; }
+.cj-share-pill.warn { background: var(--status-amber-bg); color: var(--status-amber-text); }
+.cj-share-pill.off  { background: var(--status-red-bg); color: var(--status-red-text); }
+.cj-share-meta { font-size: var(--fs-xs); color: var(--text-light); }
+.cj-share-help {
+  font-size: var(--fs-xs); line-height: 1.55;
+  background: var(--status-amber-bg); color: var(--status-amber-text);
+  border-radius: var(--radius-sm); padding: .55rem .7rem; margin-bottom: var(--space-3);
+  overflow-wrap: anywhere;
+}
+@keyframes cjLivePulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .cj-share-pill.on::before { animation: none; } }
+
+/* Rider marker: blue dot, plus a direction arrow once a heading is known. */
+.cj-rider-marker { position: relative; }
+.cj-rider-dot2 {
+  position: absolute; left: 7px; top: 7px; width: 22px; height: 22px; border-radius: 50%;
+  background: #2563eb; border: 4px solid #fff;
+  box-shadow: 0 0 0 2px rgba(37,99,235,.35), 0 2px 6px rgba(0,0,0,.3);
+}
+.cj-rider-arrow {
+  position: absolute; inset: 0; display: none;
+  transform-origin: 50% 50%; transition: transform .6s ease;
+}
+.cj-rider-arrow::before {
+  content: ''; position: absolute; left: 50%; top: -6px; transform: translateX(-50%);
+  border-left: 8px solid transparent; border-right: 8px solid transparent; border-bottom: 13px solid #2563eb;
+  filter: drop-shadow(0 1px 1px rgba(0,0,0,.35));
+}
+.cj-rider-marker.has-heading .cj-rider-arrow { display: block; }
+@media (prefers-reduced-motion: reduce) { .cj-rider-arrow { transition: none; } }

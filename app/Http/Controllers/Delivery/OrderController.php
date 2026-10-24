@@ -128,15 +128,33 @@ class OrderController extends Controller
         $request->validate([
             'lat'      => 'required|numeric|between:-90,90',
             'lng'      => 'required|numeric|between:-180,180',
-            'accuracy' => 'nullable|numeric|min:0',
+            // Readings worse than 5 km are IP/Wi-Fi guesses, not GPS.
+            'accuracy' => 'nullable|numeric|min:0|max:5000',
+            'heading'  => 'nullable|numeric|between:0,360',
+            'speed'    => 'nullable|numeric|min:0|max:100',
         ]);
 
-        $delivery = Delivery::where('user_id', auth()->id())->findOrFail($id);
+        $delivery = Delivery::where('user_id', auth()->id())->with('order')->findOrFail($id);
 
+        // Finished, failed, cancelled — or a catering booking, which never
+        // has live tracking: tell the rider's page to STOP sharing (it
+        // clears its GPS watch and releases the screen wake lock).
+        if (!$delivery->navigationActive()) {
+            return response()->json([
+                'success' => false,
+                'stop'    => true,
+                'message' => $delivery->order?->status === 'cancelled'
+                    ? 'This order was cancelled — location sharing has stopped.'
+                    : 'This delivery is finished — location sharing has stopped.',
+            ], 409);
+        }
+
+        // Assigned but not picked up yet: not shared yet, but keep watching.
         if (!in_array($delivery->status, ['picked_up', 'in_transit'], true)) {
             return response()->json([
                 'success' => false,
-                'message' => 'Location updates are only accepted while a delivery is out for delivery.',
+                'stop'    => false,
+                'message' => 'Location sharing starts once you mark the order Picked Up.',
             ], 422);
         }
 
@@ -144,12 +162,14 @@ class OrderController extends Controller
             'current_lat'          => $request->lat,
             'current_lng'          => $request->lng,
             'current_accuracy'     => $request->accuracy,
+            'current_heading'      => $request->heading,
+            'current_speed'        => $request->speed,
             'last_location_update' => now(),
         ]);
 
         broadcast(new DeliveryLocationUpdated($delivery))->toOthers();
 
-        return response()->json(['success' => true]);
+        return response()->json(['success' => true, 'stop' => false]);
     }
 
     public function scan(Request $request)
