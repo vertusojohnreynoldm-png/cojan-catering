@@ -31,6 +31,24 @@ class OrderObserver
         );
     }
 
+    /**
+     * completed_at = when the order became Delivered (a booking: Completed);
+     * the rating window counts from it. Cleared if it's moved back out.
+     */
+    public function creating(Order $order): void
+    {
+        if ($order->status === 'delivered' && !$order->completed_at) {
+            $order->completed_at = now();
+        }
+    }
+
+    public function updating(Order $order): void
+    {
+        if ($order->isDirty('status')) {
+            $order->completed_at = $order->status === 'delivered' ? now() : null;
+        }
+    }
+
     public function updated(Order $order): void
     {
         try {
@@ -49,7 +67,7 @@ class OrderObserver
 
     private function logUpdate(Order $order): void
     {
-        $diff = ActivityLogger::diffFor($order, ignore: ['qr_code', 'gcash_reference', 'reserved_utensils', 'stock_restored_at', 'flagged_at', 'flagged_by']);
+        $diff = ActivityLogger::diffFor($order, ignore: ['qr_code', 'gcash_reference', 'completed_at', 'reserved_utensils', 'stock_restored_at', 'flagged_at', 'flagged_by']);
         if ($diff === null) {
             return;
         }

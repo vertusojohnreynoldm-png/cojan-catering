@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Customer\FeedbackController;
+use App\Http\Controllers\RatingPhotoController;
 use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogController;
 use App\Http\Controllers\Admin\FeedbackController as AdminFeedbackController;
 use App\Http\Controllers\Admin\AnalyticsController as AdminAnalyticsController;
@@ -46,6 +47,11 @@ Route::get('/', function () {
 Route::get('/orders/{order}/proof-photo', [ProofPhotoController::class, 'show'])
     ->middleware('auth')
     ->name('orders.proof-photo');
+
+// A rating's photo — hidden reviews' photos only for their owner and admins.
+Route::get('/ratings/{feedback}/photo', [RatingPhotoController::class, 'show'])
+    ->middleware('auth')
+    ->name('ratings.photo');
 
 // GCash downpayment receipt — owner or admin only (checked in the controller).
 Route::get('/orders/{order}/receipt', [ReceiptController::class, 'show'])
@@ -170,9 +176,13 @@ Route::middleware(['auth', 'role:customer'])->prefix('customer')->name('customer
     Route::post('/orders/{id}/receipt', [ReceiptController::class, 'store'])->name('orders.receipt.store');
     Route::post('/orders/{id}/confirm-received', [OrderController::class, 'confirmReceived'])->name('orders.confirm-received');
 
-    // Feedback
-    Route::get('/orders/{id}/feedback', [FeedbackController::class, 'create'])->name('feedback.create');
-    Route::post('/orders/{id}/feedback', [FeedbackController::class, 'store'])->name('feedback.store');
+    // Ratings — verified, not blocked, and rate-limited (AppServiceProvider).
+    // Who may rate which order, and until when: App\Services\Ratings.
+    Route::middleware(['verified', 'not-blocked'])->group(function () {
+        Route::get('/orders/{id}/feedback', [FeedbackController::class, 'create'])->name('feedback.create');
+        Route::post('/orders/{id}/feedback', [FeedbackController::class, 'store'])->middleware('throttle:ratings')->name('feedback.store');
+        Route::put('/orders/{id}/feedback', [FeedbackController::class, 'update'])->middleware('throttle:ratings')->name('feedback.update');
+    });
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');

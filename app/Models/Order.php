@@ -65,6 +65,7 @@ class Order extends Model
         'downpayment_paid_at' => 'datetime',
         'receipt_uploaded_at' => 'datetime',
         'receipt_rejected_at' => 'datetime',
+        'completed_at' => 'datetime',
     ];
 
     public function user()
@@ -75,6 +76,12 @@ class Order extends Model
     public function orderItems()
     {
         return $this->hasMany(OrderItem::class);
+    }
+
+    /** The customer's rating of this order (one per order). */
+    public function feedback()
+    {
+        return $this->hasOne(Feedback::class);
     }
 
     public function delivery()

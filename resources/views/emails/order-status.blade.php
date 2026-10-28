@@ -37,7 +37,18 @@
     </tr>
 </table>
 
-@unless($order->isBooking())
+@if($order->status === 'delivered')
+    <p style="margin:20px 0 8px;font-size:15px;">
+        How was {{ $order->isBooking() ? 'your event' : 'everything' }}? Your rating helps us — and other customers.
+    </p>
+    <table role="presentation" cellpadding="0" cellspacing="0" style="margin:0 0 20px;">
+        <tr>
+            <td style="background:#C1441E;border-radius:8px;">
+                <a href="{{ route('customer.feedback.create', $order->id) }}" style="display:inline-block;padding:12px 28px;color:#ffffff;font-weight:bold;text-decoration:none;font-size:14px;">&#9733; Rate your {{ $order->isBooking() ? 'booking' : 'order' }} &rarr;</a>
+            </td>
+        </tr>
+    </table>
+@elseif(!$order->isBooking())
     <table role="presentation" cellpadding="0" cellspacing="0" style="margin:20px 0;">
         <tr>
             <td style="background:#E8A93B;border-radius:8px;">
@@ -45,7 +56,7 @@
             </td>
         </tr>
     </table>
-@endunless
+@endif
 
 <p style="margin:16px 0 0;font-size:13px;color:#718096;">
     Questions about your {{ $order->isBooking() ? 'booking' : 'order' }}? Just reply to this email or reach out through the app.

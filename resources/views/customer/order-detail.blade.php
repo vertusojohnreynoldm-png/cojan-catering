@@ -19,6 +19,8 @@
 
 <x-delivery-proof-card :order="$order" />
 
+<x-order-rating :order="$order" />
+
 <div class="row g-3">
     <!-- Order Info -->
     <div class="col-12 {{ $order->isBooking() ? '' : 'col-md-6' }}">
@@ -159,10 +161,5 @@
     <a href="{{ route('customer.orders') }}" class="cj-back-link">
         ← Back to Orders
     </a>
-    @if($order->status === 'delivered')
-        <a href="{{ route('customer.feedback.create', $order->id) }}" class="btn-cj btn-cj">
-            ⭐ Leave Feedback
-        </a>
-    @endif
 </div>
 @endsection

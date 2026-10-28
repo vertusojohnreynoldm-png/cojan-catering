@@ -66,6 +66,7 @@
 @endif
 
 <x-delivery-proof-card :order="$order" />
+<x-order-rating :order="$order" />
 
 <div class="row g-3">
     <!-- Order Info -->

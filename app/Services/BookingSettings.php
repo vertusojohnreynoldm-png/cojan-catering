@@ -66,6 +66,16 @@ class BookingSettings
             'label' => 'Max pending menu orders per customer',
             'help' => 'A customer can\'t place another menu order while this many of their orders are still Pending.',
         ],
+        'rating_window_days' => [
+            'default' => 30, 'min' => 1, 'max' => 365,
+            'label' => 'Days to rate an order',
+            'help' => 'Customers can rate a delivered order (or completed booking) for this many days. After that the Rate button and reminder disappear.',
+        ],
+        'rating_edit_days' => [
+            'default' => 7, 'min' => 0, 'max' => 60,
+            'label' => 'Days to edit a rating',
+            'help' => 'How long after submitting a customer can still change their rating. 0 means ratings can\'t be edited.',
+        ],
     ];
 
     public static function get(string $key): int

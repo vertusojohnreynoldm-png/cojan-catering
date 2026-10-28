@@ -38,6 +38,12 @@ class AppServiceProvider extends ServiceProvider
         // D): the page normally asks at most once a minute (or after going
         // ~50 m off-route), so 12/min per user is generous for real use but
         // stops a runaway loop from hammering the free routing providers.
+        // Ratings: a person rates at most a handful of orders at a time, so
+        // 5 submissions a minute is plenty and stops scripted spam.
+        RateLimiter::for('ratings', fn (Request $request) => Limit::perMinute(5)
+            ->by('ratings:' . ($request->user()?->id ?? $request->ip()))
+            ->response(fn () => back()->withInput()->with('error', 'Too many rating submissions — please wait a minute and try again.')));
+
         RateLimiter::for('routing', fn (Request $request) => Limit::perMinute(12)
             ->by('routing:' . ($request->user()?->id ?? $request->ip()))
             ->response(fn () => response()->json([

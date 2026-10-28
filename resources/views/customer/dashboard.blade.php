@@ -55,6 +55,8 @@
     <p>What would you like to order today?</p>
 </div>
 
+<x-rate-reminder />
+
 <div class="row g-3">
     <div class="col-6 col-lg-4">
         <div class="dash-card">

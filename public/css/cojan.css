@@ -127,7 +127,7 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
 .cj-nav-links { display: flex; gap: .5rem; align-items: center; }
 
 /* ── BUTTONS ── */
-.btn-cj, .btn-cj-outline, .btn-cj-amber, .btn-cj-danger {
+.btn-cj, .btn-cj-outline, .btn-cj-secondary, .btn-cj-amber, .btn-cj-danger {
   display: inline-flex;
   align-items: center;
   gap: .4rem;
@@ -164,6 +164,16 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
   border-color: var(--white);
   color: var(--white);
   transform: translateY(-1px);
+}
+/* Secondary action on a light surface (btn-cj-outline is for dark headers). */
+.btn-cj-secondary {
+  background: var(--white);
+  color: var(--green-dark);
+  border-color: var(--green-dark);
+}
+.btn-cj-secondary:hover {
+  background: var(--green-light, #FBE8DE);
+  color: var(--green-dark);
 }
 .btn-cj-amber {
   background: var(--amber);
@@ -788,7 +798,7 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
    one-handed thumb target; 16px on inputs is specifically what stops iOS
    Safari auto-zooming the page on focus (anything under 16px triggers it). */
 @media (max-width: 768px) {
-  .btn-cj, .btn-cj-outline, .btn-cj-amber, .btn-cj-danger {
+  .btn-cj, .btn-cj-outline, .btn-cj-secondary, .btn-cj-amber, .btn-cj-danger {
     min-height: 44px;
     padding-top: .6rem;
     padding-bottom: .6rem;
@@ -1380,3 +1390,55 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
 /* Order QR (a fixed 300×300 SVG): shrinks to fit narrow phones. */
 .cj-order-qr { max-width: 100%; box-sizing: border-box; }
 .cj-order-qr svg { display: block; max-width: 100%; height: auto; }
+
+/* ── RATINGS ── */
+.cj-card-header-note { font-family: 'DM Sans', sans-serif; font-size: var(--fs-sm); font-weight: 400; opacity: .8; }
+.cj-check { display: inline-flex; align-items: center; gap: .5rem; min-height: 44px; font-size: var(--fs-sm); cursor: pointer; }
+.cj-check input { width: 18px; height: 18px; accent-color: var(--green-dark); }
+
+/* Star picker (components/star-input) */
+.cj-stars { border: 0; padding: 0; margin: 0 0 var(--space-4); min-width: 0; }
+/* Floated so the legend sits inside the fieldset (also inside the shortcut's tinted box). */
+.cj-stars-legend { float: left; width: 100%; font-size: var(--fs-base); font-weight: 600; color: var(--text-dark); margin-bottom: var(--space-1); padding: 0; }
+.cj-stars-req { color: var(--required); margin-left: 2px; }
+.cj-stars-hint, .cj-stars-row { clear: both; }
+.cj-stars-hint { font-size: var(--fs-sm); color: var(--text-light); margin: 0 0 var(--space-1); }
+.cj-stars-row { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
+.cj-stars-input { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+.cj-star {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 44px; height: 44px; font-size: 2rem; line-height: 1;
+  color: #d9cdbf; cursor: pointer; border-radius: var(--radius-sm);
+  transition: color .12s ease, transform .12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.cj-star.on { color: var(--amber); }
+.cj-stars-input:focus-visible + .cj-star { outline: 2px solid var(--green-dark); outline-offset: 1px; }
+@media (prefers-reduced-motion: no-preference) {
+  .cj-star:active { transform: scale(.88); }
+}
+.cj-stars-word { margin-left: var(--space-2); font-size: var(--fs-sm); color: var(--text-mid); min-width: 5.5em; }
+.cj-stars-shortcut { background: var(--cream); border-radius: var(--radius-base); padding: var(--space-3); }
+
+/* Rating form */
+.cj-rate-form .cj-sticky-actions .cj-back-link { margin-top: 0; }
+.cj-rate-item { padding: var(--space-3) 0; border-top: 1px solid rgba(122,46,29,.1); }
+.cj-rate-item .cj-stars { margin-bottom: var(--space-2); }
+.cj-rate-item-comment { width: 100%; }
+.cj-rate-count { display: block; text-align: right; color: var(--text-light); font-size: var(--fs-xs); margin-top: 2px; }
+.cj-rate-photo-img { display: block; max-width: 220px; width: 100%; height: auto; border-radius: var(--radius-base); box-shadow: var(--shadow-sm); margin-bottom: var(--space-2); }
+.cj-rate-photo-btn { min-height: 44px; }
+.cj-rate-photo-msg { display: block; color: var(--required); margin-top: var(--space-1); }
+@media (max-width: 768px) {
+  .cj-rate-item-comment { font-size: 16px; min-height: 44px; } /* no iOS zoom */
+}
+
+/* Reminder banner + rating summary */
+.cj-rate-banner { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+.cj-rate-banner > span { flex: 1 1 14rem; }
+.cj-rate-banner-close { margin-left: auto; min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 1.4rem; line-height: 1; color: inherit; cursor: pointer; }
+.cj-stars-static { color: var(--amber); letter-spacing: 1px; white-space: nowrap; }
+.cj-stars-static .off { color: #d9cdbf; }
+.cj-rating-row { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); padding: var(--space-1) 0; flex-wrap: wrap; }
+.cj-rating-row > span:first-child { color: var(--text-mid); }
+.cj-rating-reply { background: var(--cream); border-left: 3px solid var(--amber); border-radius: var(--radius-sm); padding: var(--space-3); margin-top: var(--space-3); }

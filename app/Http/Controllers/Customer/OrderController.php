@@ -36,6 +36,7 @@ class OrderController extends Controller
         UnpaidBookingExpirer::runIfDue(); // lazy expiry — Railway has no scheduler
 
         $orders = Order::where('user_id', auth()->id())
+            ->with('feedback')
             ->orderBy('created_at', 'desc')
             ->get();
 

@@ -6,6 +6,8 @@
 <x-breadcrumbs :items="['My Orders' => null]" />
 <h1 class="cj-page-title">My Orders</h1>
 
+<x-rate-reminder />
+
 @if($orders->isEmpty())
     <div class="cj-card mt-3">
         <div class="cj-card-body text-center py-5">
@@ -48,6 +50,10 @@
                             <td data-label="" class="cj-td-actions">
                                 <a href="{{ route('customer.orders.show', $order->id) }}"
                                    class="btn-cj btn-cj-sm">View</a>
+                                @if(\App\Services\Ratings::status($order) === \App\Services\Ratings::OPEN)
+                                    <a href="{{ route('customer.feedback.create', $order->id) }}"
+                                       class="btn-cj-amber btn-cj btn-cj-sm"><i class="bi bi-star" aria-hidden="true"></i> Rate</a>
+                                @endif
                             </td>
                         </tr>
                         @endforeach
