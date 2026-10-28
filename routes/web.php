@@ -3,7 +3,7 @@
 use App\Http\Controllers\Customer\FeedbackController;
 use App\Http\Controllers\RatingPhotoController;
 use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogController;
-use App\Http\Controllers\Admin\FeedbackController as AdminFeedbackController;
+use App\Http\Controllers\Admin\RatingController as AdminRatingController;
 use App\Http\Controllers\Admin\AnalyticsController as AdminAnalyticsController;
 use App\Http\Controllers\Admin\InventoryController as AdminInventoryController;
 use App\Http\Controllers\Delivery\OrderController as DeliveryOrderController;
@@ -120,8 +120,12 @@ Route::middleware(['auth', 'role:admin'])->prefix('admin')->name('admin.')->grou
     // Analytics
     Route::get('/analytics', [AdminAnalyticsController::class, 'index'])->name('analytics');
 
-    // Feedback
-    Route::get('/feedback', [AdminFeedbackController::class, 'index'])->name('feedback');
+    // Ratings (was "Feedback" — the old URL still works and redirects here)
+    Route::get('/ratings', [AdminRatingController::class, 'index'])->name('ratings');
+    Route::post('/ratings/{feedback}/reply', [AdminRatingController::class, 'reply'])->name('ratings.reply');
+    Route::post('/ratings/{feedback}/hide', [AdminRatingController::class, 'hide'])->name('ratings.hide');
+    Route::post('/ratings/{feedback}/unhide', [AdminRatingController::class, 'unhide'])->name('ratings.unhide');
+    Route::get('/feedback', fn () => redirect()->route('admin.ratings', request()->query(), 301))->name('feedback');
 
     // Activity Log (audit trail) — read-only, admin-only (already scoped by
     // this group's auth+role:admin middleware).

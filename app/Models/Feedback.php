@@ -84,9 +84,44 @@ class Feedback extends Model
         return $this->belongsTo(User::class, 'rider_id');
     }
 
+    /** The admin who hid it (null once un-hidden). */
+    public function hider()
+    {
+        return $this->belongsTo(User::class, 'hidden_by');
+    }
+
+    /** The admin who wrote the current reply. */
+    public function replier()
+    {
+        return $this->belongsTo(User::class, 'replied_by');
+    }
+
     public function scopeVisible(Builder $query): Builder
     {
         return $query->where('is_hidden', false);
+    }
+
+    /** Any score of 1–2 stars — overall, service, food, or any item. */
+    public function scopeLow(Builder $query): Builder
+    {
+        return $query->where(fn ($q) => $q->where('rating', '<=', 2)
+            ->orWhere('rating_service', '<=', 2)
+            ->orWhere('rating_food', '<=', 2)
+            ->orWhereHas('items', fn ($i) => $i->where('rating', '<=', 2)));
+    }
+
+    /** The lowest score anywhere in this rating (uses loaded items). */
+    public function lowestScore(): int
+    {
+        return (int) collect([$this->rating, $this->rating_service, $this->rating_food])
+            ->merge($this->items->pluck('rating'))
+            ->filter()
+            ->min();
+    }
+
+    public function isLow(): bool
+    {
+        return $this->lowestScore() > 0 && $this->lowestScore() <= 2;
     }
 
     /**

@@ -56,6 +56,31 @@
         </div>
     </div>
 
+    <!-- Low ratings (1–2 stars anywhere, last 30 days) -->
+    <div class="cj-card mb-4 cj-low-ratings {{ $lowRatings->isNotEmpty() ? 'has-low' : '' }}">
+        <div class="cj-card-header d-flex justify-content-between align-items-center gap-2">
+            <span><i class="bi bi-exclamation-triangle" aria-hidden="true"></i> Low ratings · last 30 days</span>
+            <a href="{{ route('admin.ratings', ['stars' => 'low', 'from' => now()->subDays(30)->toDateString()]) }}" class="btn-cj-amber btn-cj btn-cj-sm">View All</a>
+        </div>
+        <div class="cj-card-body p-0">
+            @forelse($lowRatings as $low)
+                <a href="{{ route('admin.ratings', ['stars' => 'low', 'from' => now()->subDays(30)->toDateString()]) }}#rating-{{ $low->id }}" class="cj-low-row">
+                    <span class="cj-low-score" aria-label="Lowest score {{ $low->lowestScore() }} of 5">{{ $low->lowestScore() }}★</span>
+                    <span class="cj-low-text">
+                        <strong>{{ $low->user?->name ?? 'Deleted customer' }}</strong> · Order #{{ $low->order?->order_number }}
+                        @if($low->is_hidden)<span class="badge-cj badge-blocked">Hidden</span>@endif
+                        @if($low->comment)
+                            <span class="cj-low-comment">“{{ \Illuminate\Support\Str::limit($low->comment, 90) }}”</span>
+                        @endif
+                    </span>
+                    <span class="cj-low-time">{{ $low->created_at->diffForHumans() }}</span>
+                </a>
+            @empty
+                <div class="text-center py-4" style="color:var(--text-light);">No 1–2 star ratings in the last 30 days.</div>
+            @endforelse
+        </div>
+    </div>
+
     <!-- Recent Orders -->
     <div class="cj-card">
         <div class="cj-card-header d-flex justify-content-between align-items-center">

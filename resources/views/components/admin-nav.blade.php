@@ -142,9 +142,9 @@
            class="btn-cj-outline btn-cj btn-cj-sm {{ request()->routeIs('admin.analytics*') ? 'cj-admin-nav-active' : '' }}">
             <i class="bi bi-graph-up"></i> Analytics
         </a>
-        <a href="{{ route('admin.feedback') }}" onclick="toggleAdminNav()"
-           class="btn-cj-outline btn-cj btn-cj-sm {{ request()->routeIs('admin.feedback*') ? 'cj-admin-nav-active' : '' }}">
-            <i class="bi bi-chat-square-text"></i> Feedback
+        <a href="{{ route('admin.ratings') }}" onclick="toggleAdminNav()"
+           class="btn-cj-outline btn-cj btn-cj-sm {{ request()->routeIs('admin.ratings*') ? 'cj-admin-nav-active' : '' }}">
+            <i class="bi bi-star"></i> Ratings
         </a>
         <a href="{{ route('admin.users') }}" onclick="toggleAdminNav()"
            class="btn-cj-outline btn-cj btn-cj-sm {{ request()->routeIs('admin.users*') ? 'cj-admin-nav-active' : '' }}">
