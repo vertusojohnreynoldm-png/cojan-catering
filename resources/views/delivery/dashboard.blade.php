@@ -53,6 +53,7 @@
             <input type="text" name="order_number" class="cj-input" placeholder="Enter order number (e.g. ORD-XXXXXXXX)" style="max-width:400px">
             <button type="submit" class="btn-cj-amber">Find Order</button>
         </form>
+        <p class="cj-scan-hint">Works once you've picked up the order. Before pickup, open it from My Deliveries below.</p>
     </div>
 
     <!-- Deliveries -->

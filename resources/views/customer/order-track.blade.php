@@ -69,6 +69,13 @@
 <x-order-rating :order="$order" />
 
 <div class="row g-3">
+    @if($tracking)
+    <!-- QR Code (menu orders) — only while the rider has the order -->
+    <div class="col-12">
+        <x-order-qr-card :order="$order" />
+    </div>
+    @endif
+
     <!-- Order Info -->
     <div class="col-12 col-md-6">
         <div class="cj-card h-100">
@@ -264,9 +271,12 @@
         // Reload once: the server now renders the final state (no live map).
         window.location.reload();
     }
+    const startedActive = state.active;
     function apply(s) {
         state = s;
-        if (s.final) { finish(); return; }
+        // Finished, or the rider just picked up (or un-picked) the order:
+        // reload so the server re-renders the stepper and the QR card.
+        if (s.final || s.active !== startedActive) { finish(); return; }
         if (s.rider) {
             placeRider([s.rider.lat, s.rider.lng], s.rider.heading);
             setAge(s.rider.age_seconds ?? 0);

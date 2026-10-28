@@ -55,6 +55,9 @@ class Order extends Model
         'longitude',
     ];
 
+    // The QR is only printed through qrVisible() — never via toArray()/JSON.
+    protected $hidden = ['qr_code'];
+
     protected $casts = [
         'event_date' => 'datetime',
         'requested_delivery_at' => 'datetime',
@@ -193,6 +196,33 @@ class Order extends Model
     public function flagLabel(): ?string
     {
         return self::FLAGS[$this->flag] ?? null;
+    }
+
+    /**
+     * Where a MENU order is in its QR window. The QR is only shown while the
+     * rider actually has the order (delivery picked up / in transit):
+     *   waiting   — pending, confirmed, preparing, or assigned but not picked up
+     *   active    — picked up / in transit
+     *   delivered | cancelled | failed — finished; the QR never shows again
+     * Bookings have no rider and are not covered by this (see the views).
+     */
+    public function qrStage(): string
+    {
+        $deliveryStatus = $this->delivery?->status;
+
+        return match (true) {
+            $this->status === 'cancelled' => 'cancelled',
+            $this->status === 'delivered', $deliveryStatus === 'delivered' => 'delivered',
+            $deliveryStatus === 'failed' => 'failed',
+            in_array($deliveryStatus, ['picked_up', 'in_transit'], true) => 'active',
+            default => 'waiting',
+        };
+    }
+
+    /** True only when the order QR may be printed on a page. */
+    public function qrVisible(): bool
+    {
+        return !$this->isBooking() && $this->qr_code && $this->qrStage() === 'active';
     }
 
     /** Pending / confirmed / preparing / out for delivery — not finished or cancelled. */

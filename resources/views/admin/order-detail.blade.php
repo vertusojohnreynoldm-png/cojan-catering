@@ -292,7 +292,16 @@
     <div class="cj-card mt-3">
         <div class="cj-card-header">QR Code</div>
         <div class="cj-card-body text-center py-4">
-            @if($order->qr_code)
+            @if(!$order->isBooking() && !$order->qrVisible())
+                {{-- Menu orders: the QR only exists on pages while the rider has the order. --}}
+                <p style="color:var(--text-light);margin:0;">
+                    @if($order->qrStage() === 'waiting')
+                        Hidden until the rider picks up the order.
+                    @else
+                        Closed — this order is {{ $order->qrStage() === 'failed' ? 'marked failed' : $order->qrStage() }}.
+                    @endif
+                </p>
+            @elseif($order->qr_code)
                 <div style="display:inline-block;padding:16px;background:#fff;
                             border-radius:var(--radius-md);box-shadow:0 2px 12px rgba(0,0,0,0.08);">
                     {!! $order->qr_code !!}

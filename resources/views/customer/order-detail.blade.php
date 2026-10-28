@@ -82,28 +82,10 @@
     </div>
 
     <!-- QR Code — bookings have no rider to scan/track against, so this is
-         hidden entirely for them. QR generation itself is untouched; it's
-         still generated at order creation, just not shown here. -->
+         hidden entirely for them. Menu orders: only while the rider has it. -->
     @unless($order->isBooking())
     <div class="col-12 col-md-6">
-        <div class="cj-card h-100">
-            <div class="cj-card-header">QR Code</div>
-            <div class="cj-card-body text-center py-4">
-                @if($order->qr_code)
-                    <div role="img" aria-label="QR code to track order {{ $order->order_number }}"
-                         class="cj-order-qr"
-                         style="display:inline-block;padding:16px;background:#fff;
-                                border-radius:var(--radius-md);box-shadow:0 2px 12px rgba(0,0,0,0.08);">
-                        <div aria-hidden="true">{!! $order->qr_code !!}</div>
-                    </div>
-                    <p style="color:var(--text-light);font-size:.8rem;margin-top:1rem;">
-                        Scan this QR code to track your order
-                    </p>
-                @else
-                    <p style="color:var(--text-light);">QR Code not available</p>
-                @endif
-            </div>
-        </div>
+        <x-order-qr-card :order="$order" :poll="true" />
     </div>
     @endunless
 

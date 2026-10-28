@@ -1388,7 +1388,11 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
   .cj-table-stack .cj-td-actions .btn-cj { flex: 1 1 auto; justify-content: center; }
 }
 /* Order QR (a fixed 300×300 SVG): shrinks to fit narrow phones. */
-.cj-order-qr { max-width: 100%; box-sizing: border-box; }
+.cj-order-qr { display: inline-block; max-width: 100%; box-sizing: border-box; padding: 16px; background: #fff; border-radius: var(--radius-md); box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+.cj-qr-caption { color: var(--text-light); font-size: var(--fs-sm); margin: var(--space-3) 0 0; }
+.cj-qr-waiting { display: flex; align-items: center; gap: .7rem; background: var(--amber-light); color: var(--status-amber-text); border-radius: var(--radius-base); padding: .8rem 1rem; font-size: var(--fs-sm); }
+.cj-qr-waiting > i { font-size: 1.6rem; line-height: 1; }
+.cj-scan-hint { font-size: var(--fs-sm); color: var(--text-light); margin: var(--space-2) 0 0; }
 .cj-order-qr svg { display: block; max-width: 100%; height: auto; }
 
 /* ── RATINGS ── */

@@ -191,6 +191,23 @@ class OrderController extends Controller
                 ->with('error', 'This order is not assigned to you!');
         }
 
+        // Menu orders: a scan only works while you have the order (picked up
+        // / in transit) — the same window the customer's QR is shown in.
+        // Bookings are unchanged.
+        if (!$order->isBooking()) {
+            $order->setRelation('delivery', $delivery);
+            $error = match ($order->qrStage()) {
+                'waiting'   => "Too early — Order #{$order->order_number} hasn't been picked up yet. Open it from My Deliveries and mark it Picked Up first.",
+                'delivered' => "Order #{$order->order_number} is already delivered — there's nothing left to scan.",
+                'cancelled' => "Order #{$order->order_number} was cancelled — don't deliver it.",
+                'failed'    => "Order #{$order->order_number} is marked as failed — there's nothing left to scan.",
+                default     => null,
+            };
+            if ($error) {
+                return redirect()->route('delivery.dashboard')->with('error', $error);
+            }
+        }
+
         return redirect()->route('delivery.orders.show', $delivery->id);
     }
 }
