@@ -219,6 +219,22 @@ class Order extends Model
         };
     }
 
+    /**
+     * Why a rider's scan / find-order of this menu order is refused right
+     * now, or null when it's inside the QR window. Shared by Find Order, the
+     * phone-camera QR link and the in-app scanner.
+     */
+    public function riderScanRefusal(): ?string
+    {
+        return match ($this->qrStage()) {
+            'waiting'   => "Too early — Order #{$this->order_number} hasn't been picked up yet. Open it from My Deliveries and mark it Picked Up first.",
+            'delivered' => "Order #{$this->order_number} is already delivered — there's nothing left to scan.",
+            'cancelled' => "Order #{$this->order_number} was cancelled — don't deliver it.",
+            'failed'    => "Order #{$this->order_number} is marked as failed — there's nothing left to scan.",
+            default     => null,
+        };
+    }
+
     /** True only when the order QR may be printed on a page. */
     public function qrVisible(): bool
     {

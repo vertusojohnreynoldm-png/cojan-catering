@@ -29,6 +29,32 @@
     <h1 class="cj-page-title">Delivery Detail</h1>
     <p class="cj-page-sub">Order #{{ $delivery->order->order_number }}</p>
 
+    @if(session('qr_verified') && $delivery->qrVerified())
+        <div class="alert-cj alert-success cj-qr-banner" role="status">
+            <i class="bi bi-qr-code-scan" aria-hidden="true"></i>
+            <span><strong>QR verified</strong> — take the proof photo and mark Delivered.</span>
+        </div>
+        @if($delivery->qr_scan_lat === null)
+            <script>
+            /* A phone-camera scan is a plain link, so it carries no GPS — add
+               the rider's position now (silently skipped if unavailable). */
+            (function () {
+                if (!navigator.geolocation) return;
+                navigator.geolocation.getCurrentPosition((p) => {
+                    fetch({{ \Illuminate\Support\Js::from(route('delivery.orders.qr-location', $delivery->id)) }}, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json', 'Accept': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                        body: JSON.stringify({ lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }),
+                    }).catch(() => {});
+                }, () => {}, { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 });
+            })();
+            </script>
+        @endif
+    @endif
+
     @if($nav)
         {{-- Rider navigation — menu orders only, active deliveries only
              ($nav is null otherwise, so the customer's location never
@@ -64,7 +90,7 @@
                 </div>
 
                 <div class="cj-nav-dest">
-                    <p class="mb-1"><strong>{{ $delivery->order->contact_name ?: $delivery->order->user->name }}</strong> · <a href="{{ $nav['tel'] }}">{{ $delivery->order->delivery_phone }}</a></p>
+                    <p class="mb-1"><strong>{{ $delivery->order->contact_name ?: $delivery->order->user->name }}</strong> · <a href="{{ $nav['tel'] }}" class="cj-tel-link">{{ $delivery->order->delivery_phone }}</a></p>
                     <p class="mb-1">{{ $delivery->order->street }}@if($delivery->order->barangay), {{ $delivery->order->barangay }}@endif</p>
                     @if($delivery->order->landmark)
                         <p class="mb-1"><i class="bi bi-geo"></i> Landmark: {{ $delivery->order->landmark }}</p>
@@ -166,6 +192,7 @@
                     {{-- Deliveries completed before proof photos existed. --}}
                     <p class="mb-0" style="color:var(--text-light);">No proof photo or note was recorded for this delivery.</p>
                 @endif
+                <x-qr-handoff :delivery="$delivery" />
             </div>
         </div>
     @elseif($delivery->status !== 'failed')
@@ -177,6 +204,8 @@
         <div class="cj-card mt-3">
             <div class="cj-card-header">Mark as Delivered</div>
             <div class="cj-card-body">
+                <x-qr-handoff :delivery="$delivery" />
+
                 <div id="pod-camera-area">
                     <label for="pod-photo-input" id="pod-camera-btn"
                            style="display:flex;flex-direction:column;align-items:center;justify-content:center;

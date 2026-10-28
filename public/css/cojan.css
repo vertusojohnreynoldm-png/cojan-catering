@@ -1393,6 +1393,23 @@ h1,h2,h3,h4,h5 { font-family: 'Playfair Display', serif; line-height: var(--lh-x
 .cj-qr-waiting { display: flex; align-items: center; gap: .7rem; background: var(--amber-light); color: var(--status-amber-text); border-radius: var(--radius-base); padding: .8rem 1rem; font-size: var(--fs-sm); }
 .cj-qr-waiting > i { font-size: 1.6rem; line-height: 1; }
 .cj-scan-hint { font-size: var(--fs-sm); color: var(--text-light); margin: var(--space-2) 0 0; }
+
+/* ── QR HAND-OFF (rider scans the customer's order QR) ── */
+.cj-qr-verified { display: inline-flex; align-items: flex-start; gap: .45rem; color: var(--status-green-text); font-weight: 600; font-size: var(--fs-sm); margin: 0 0 var(--space-3); }
+.cj-qr-verified > i { font-size: 1.1rem; line-height: 1.2; }
+.cj-qr-verified-meta { display: block; font-weight: 400; color: var(--text-light); font-size: var(--fs-xs); }
+.cj-qr-unverified { display: inline-flex; align-items: center; gap: .45rem; color: var(--status-amber-text); background: var(--status-amber-bg); border-radius: var(--radius-sm); padding: .35rem .65rem; font-size: var(--fs-sm); font-weight: 600; }
+.cj-qr-banner { margin-bottom: var(--space-3); }
+.cj-qr-scan-box { margin-bottom: var(--space-3); padding-bottom: var(--space-3); border-bottom: 1px solid rgba(122,46,29,.12); }
+.cj-qr-scan-btn { width: 100%; min-height: 48px; display: inline-flex; align-items: center; justify-content: center; gap: .5rem; }
+.cj-qr-scan-hint { font-size: var(--fs-sm); color: var(--text-light); margin: var(--space-2) 0; }
+.cj-qr-viewfinder { position: relative; background: #000; border-radius: var(--radius-base); overflow: hidden; aspect-ratio: 1 / 1; max-height: 60vh; max-height: 60dvh; margin: 0 auto; }
+.cj-qr-viewfinder video { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cj-qr-frame { position: absolute; inset: 15%; border: 3px solid rgba(255,255,255,.9); border-radius: var(--radius-md); box-shadow: 0 0 0 9999px rgba(0,0,0,.35); pointer-events: none; }
+.cj-qr-scan-status { margin: var(--space-3) 0 0; font-size: var(--fs-sm); text-align: center; }
+.cj-qr-scan-status.error { color: var(--status-red-text); font-weight: 600; }
+/* The customer's phone number on the rider's nav card: a full 44px tap target. */
+.cj-tel-link { display: inline-flex; align-items: center; min-height: 44px; padding: 0 .35rem; margin: -12px -.35rem; }
 .cj-order-qr svg { display: block; max-width: 100%; height: auto; }
 
 /* ── RATINGS ── */

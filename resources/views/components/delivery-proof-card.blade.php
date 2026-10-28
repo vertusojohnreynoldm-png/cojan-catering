@@ -27,6 +27,12 @@
                 @if($order->delivery->delivery_note)
                     <p style="margin-bottom:.75rem;"><strong>Note:</strong> {{ $order->delivery->delivery_note }}</p>
                 @endif
+                @if($order->delivery->qrVerified())
+                    <p class="cj-qr-verified" style="margin-bottom:.75rem;">
+                        <i class="bi bi-qr-code-scan" aria-hidden="true"></i>
+                        QR verified at hand-off at {{ $order->delivery->qr_scanned_at->format('g:i A') }}
+                    </p>
+                @endif
 
                 @if($order->delivery->customer_confirmed_at)
                     <p style="color:var(--green-dark);font-weight:600;margin-bottom:0;">

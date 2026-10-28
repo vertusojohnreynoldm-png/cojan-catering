@@ -83,6 +83,7 @@
                             @endif
                         </p>
                     @endif
+                    @include('admin.partials.qr-handoff-status', ['delivery' => $order->delivery])
                     @if($order->delivery->customer_confirmed_at)
                         <p class="mb-0" style="color:var(--green-dark);font-weight:600;">
                             <i class="bi bi-check-circle-fill" aria-hidden="true"></i>
@@ -309,6 +310,10 @@
                 <p style="color:var(--text-light);font-size:.8rem;margin-top:1rem;">Scan to track this order</p>
             @else
                 <p style="color:var(--text-light);">QR Code not available</p>
+            @endif
+            {{-- Mid-delivery only; once delivered it shows in Delivery Proof above. --}}
+            @if($order->delivery && !$order->isBooking() && $order->delivery->status !== 'delivered')
+                <div class="mt-3">@include('admin.partials.qr-handoff-status', ['delivery' => $order->delivery])</div>
             @endif
         </div>
     </div>

@@ -42,6 +42,8 @@ class DeliveryObserver
             // stops that same save from also producing a generic, redundant
             // "updated delivery (customer_confirmed_at)" entry.
             'customer_confirmed_at',
+            // Logged as "delivery.qr_verified" by App\Services\QrHandoff.
+            'qr_scanned_at', 'qr_scanned_by', 'qr_scan_lat', 'qr_scan_lng', 'qr_scan_accuracy',
         ]);
         if ($diff === null) {
             return;

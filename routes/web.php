@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Customer\FeedbackController;
 use App\Http\Controllers\RatingPhotoController;
+use App\Http\Controllers\TrackLinkController;
 use App\Http\Controllers\Admin\ActivityLogController as AdminActivityLogController;
 use App\Http\Controllers\Admin\RatingController as AdminRatingController;
 use App\Http\Controllers\Admin\AnalyticsController as AdminAnalyticsController;
@@ -201,10 +202,12 @@ Route::middleware(['auth', 'role:customer'])->prefix('customer')->name('customer
     Route::post('/chat/send', [ChatController::class, 'send'])->name('chat.send');
 });
 
-// Order tracking (requires login — scanning the QR while logged out redirects
-// through login and lands back here via redirect()->intended())
-Route::middleware(['auth', 'role:customer'])
-    ->get('/track/{orderNumber}', [OrderController::class, 'track'])
+// Order tracking = the link inside every order QR (requires login — scanning
+// the QR while logged out redirects through login and lands back here via
+// redirect()->intended()). Customers get their tracking page; the ASSIGNED
+// rider records "QR verified at hand-off" (see TrackLinkController).
+Route::middleware(['auth'])
+    ->get('/track/{orderNumber}', TrackLinkController::class)
     ->name('customer.orders.track');
 
 // Live tracking data for the tracking page (menu orders). Accepts no
@@ -223,6 +226,9 @@ Route::middleware(['auth', 'role:delivery'])->prefix('delivery')->name('delivery
     // Road route to the customer's pin — rate-limited per rider (AppServiceProvider).
     Route::get('/orders/{id}/route', [DeliveryOrderController::class, 'route'])->middleware('throttle:routing')->name('orders.route');
     Route::post('/scan', [DeliveryOrderController::class, 'scan'])->name('scan');
+    // In-app "Scan customer QR" + the GPS fix sent after a phone-camera scan.
+    Route::post('/orders/{id}/verify-qr', [DeliveryOrderController::class, 'verifyQr'])->middleware('throttle:20,1')->name('orders.verify-qr');
+    Route::post('/orders/{id}/qr-location', [DeliveryOrderController::class, 'qrLocation'])->middleware('throttle:20,1')->name('orders.qr-location');
 });
 
 require __DIR__.'/auth.php';

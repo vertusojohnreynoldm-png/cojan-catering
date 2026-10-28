@@ -33,6 +33,11 @@ class Delivery extends Model
         'proof_lng',
         'proof_accuracy',
         'customer_confirmed_at',
+        'qr_scanned_at',
+        'qr_scanned_by',
+        'qr_scan_lat',
+        'qr_scan_lng',
+        'qr_scan_accuracy',
     ];
 
     protected $casts = [
@@ -47,6 +52,10 @@ class Delivery extends Model
         'proof_lng'             => 'float',
         'proof_accuracy'        => 'float',
         'customer_confirmed_at' => 'datetime',
+        'qr_scanned_at'         => 'datetime',
+        'qr_scan_lat'           => 'float',
+        'qr_scan_lng'           => 'float',
+        'qr_scan_accuracy'      => 'float',
     ];
 
     public function order()
@@ -73,6 +82,23 @@ class Delivery extends Model
     public function personnel()
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    public function qrScanner()
+    {
+        return $this->belongsTo(User::class, 'qr_scanned_by');
+    }
+
+    /** The assigned rider scanned the customer's order QR at hand-off. */
+    public function qrVerified(): bool
+    {
+        return $this->qr_scanned_at !== null;
+    }
+
+    /** A menu order completed without the (optional) QR hand-off scan. */
+    public function deliveredWithoutQr(): bool
+    {
+        return $this->status === 'delivered' && !$this->qrVerified() && !$this->order?->isBooking();
     }
 
     public function hasProofOfDelivery(): bool

@@ -8,6 +8,7 @@ use App\Models\Delivery;
 use App\Models\Order;
 use App\Services\DeliveryLocation;
 use App\Services\OrderNotifier;
+use App\Services\QrHandoff;
 use App\Services\RouteService;
 use Illuminate\Http\Request;
 
@@ -172,6 +173,62 @@ class OrderController extends Controller
         return response()->json(['success' => true, 'stop' => false]);
     }
 
+    /**
+     * In-app "Scan customer QR". Accepts only THIS site's /track/{order
+     * number} link for THIS order, only for the assigned rider, only while
+     * picked up / in transit. JSON in, JSON out.
+     */
+    public function verifyQr(Request $request, $id)
+    {
+        $data = $request->validate([
+            'code'     => 'required|string|max:2048',
+            'lat'      => 'nullable|numeric|between:-90,90',
+            'lng'      => 'nullable|numeric|between:-180,180',
+            'accuracy' => 'nullable|numeric|min:0|max:5000',
+        ]);
+
+        $delivery = Delivery::where('user_id', auth()->id())->with('order')->findOrFail($id);
+        $order = $delivery->order;
+
+        if ($order->isBooking()) {
+            return response()->json(['message' => 'Catering bookings don\'t use QR verification.'], 422);
+        }
+        $order->setRelation('delivery', $delivery);
+        if ($error = $order->riderScanRefusal()) {
+            return response()->json(['message' => $error, 'closed' => true], 409);
+        }
+        if (!QrHandoff::matches($data['code'], $order)) {
+            return response()->json(['message' => "That QR code isn't for Order #{$order->order_number}. Ask the customer to open this order's QR."], 422);
+        }
+
+        $position = isset($data['lat'], $data['lng'])
+            ? ['lat' => (float) $data['lat'], 'lng' => (float) $data['lng'], 'accuracy' => isset($data['accuracy']) ? (float) $data['accuracy'] : null]
+            : null;
+        QrHandoff::record($delivery, $request->user(), $position, 'in-app scanner');
+
+        session()->flash('qr_verified', true);
+
+        return response()->json(['success' => true, 'redirect' => route('delivery.orders.show', $delivery->id)]);
+    }
+
+    /** GPS fix sent by the rider page right after a phone-camera QR scan. */
+    public function qrLocation(Request $request, $id)
+    {
+        $data = $request->validate([
+            'lat'      => 'required|numeric|between:-90,90',
+            'lng'      => 'required|numeric|between:-180,180',
+            'accuracy' => 'nullable|numeric|min:0|max:5000',
+        ]);
+
+        $delivery = Delivery::where('user_id', auth()->id())->findOrFail($id);
+        $saved = QrHandoff::attachPosition($delivery, $request->user(), [
+            'lat' => (float) $data['lat'], 'lng' => (float) $data['lng'],
+            'accuracy' => isset($data['accuracy']) ? (float) $data['accuracy'] : null,
+        ]);
+
+        return response()->json(['success' => $saved], $saved ? 200 : 409);
+    }
+
     public function scan(Request $request)
     {
         $orderNumber = $request->order_number;
@@ -196,14 +253,7 @@ class OrderController extends Controller
         // Bookings are unchanged.
         if (!$order->isBooking()) {
             $order->setRelation('delivery', $delivery);
-            $error = match ($order->qrStage()) {
-                'waiting'   => "Too early — Order #{$order->order_number} hasn't been picked up yet. Open it from My Deliveries and mark it Picked Up first.",
-                'delivered' => "Order #{$order->order_number} is already delivered — there's nothing left to scan.",
-                'cancelled' => "Order #{$order->order_number} was cancelled — don't deliver it.",
-                'failed'    => "Order #{$order->order_number} is marked as failed — there's nothing left to scan.",
-                default     => null,
-            };
-            if ($error) {
+            if ($error = $order->riderScanRefusal()) {
                 return redirect()->route('delivery.dashboard')->with('error', $error);
             }
         }
