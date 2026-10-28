@@ -7,6 +7,7 @@ use App\Models\Category;
 use App\Models\MenuItem;
 use App\Services\BusinessHours;
 use App\Services\CartService;
+use App\Services\RatingStats;
 use Illuminate\Http\Request;
 
 class MenuController extends Controller
@@ -22,7 +23,7 @@ class MenuController extends Controller
         return view('customer.menu', array_merge(
             compact('categories', 'menuItems', 'totalAvailableCount'),
             $this->businessHoursContext(),
-            ['maxQty' => CartService::maxPerItem()]
+            ['maxQty' => CartService::maxPerItem(), 'ratingStats' => RatingStats::all()['menu']]
         ));
     }
 
@@ -30,7 +31,16 @@ class MenuController extends Controller
     {
         $menuItem = MenuItem::with('category')->findOrFail($id);
 
-        return view('customer.menu-item', compact('menuItem'));
+        return view('customer.menu-item', array_merge(
+            compact('menuItem'),
+            $this->businessHoursContext(),
+            [
+                'maxQty' => CartService::maxPerItem(),
+                'stats' => RatingStats::forMenuItem($menuItem->id),
+                'reviews' => RatingStats::reviews('menu_item_id', $menuItem->id),
+                'breakdown' => RatingStats::breakdown('menu_item_id', $menuItem->id),
+            ]
+        ));
     }
 
     public function byCategory($categoryId)
@@ -48,7 +58,7 @@ class MenuController extends Controller
         return view('customer.menu', array_merge(
             compact('categories', 'menuItems', 'category', 'totalAvailableCount'),
             $this->businessHoursContext(),
-            ['maxQty' => CartService::maxPerItem()]
+            ['maxQty' => CartService::maxPerItem(), 'ratingStats' => RatingStats::all()['menu']]
         ));
     }
 

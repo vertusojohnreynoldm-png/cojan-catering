@@ -18,6 +18,7 @@ use App\Services\UnpaidBookingExpirer;
 use App\Services\OrderSubmissionGuard;
 use App\Services\SubmissionToken;
 use App\Services\PackageStockService;
+use App\Services\RatingStats;
 use App\Services\ServiceArea;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -55,7 +56,23 @@ class PackageController extends Controller
 
         $pendingLimitError = BookingCapacity::pendingLimitError(auth()->id(), true);
 
-        return view('customer.packages', compact('packages', 'cateringAreas', 'eventCalendar', 'pendingLimitError'));
+        $ratingStats = RatingStats::all()['package'];
+
+        return view('customer.packages', compact('packages', 'cateringAreas', 'eventCalendar', 'pendingLimitError', 'ratingStats'));
+    }
+
+    /** A package's details with its ratings & reviews. Booking still happens
+     *  through the Avail modal on the packages page (?avail= reopens it). */
+    public function show($id)
+    {
+        $package = CateringPackage::where('is_available', true)->with('menuItems', 'utensils')->findOrFail($id);
+
+        return view('customer.package', [
+            'package' => $package,
+            'stats' => RatingStats::forPackage($package->id),
+            'reviews' => RatingStats::reviews('package_id', $package->id),
+            'breakdown' => RatingStats::breakdown('package_id', $package->id),
+        ]);
     }
 
     // Step 1 of the Avail flow: the modal's booking details, staged in the

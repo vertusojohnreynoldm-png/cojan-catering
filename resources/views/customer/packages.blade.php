@@ -34,7 +34,7 @@
         <div class="menu-card">
             <div class="menu-card-img">
                 <span style="position:absolute;top:10px;left:10px;z-index:2;background:var(--amber);color:var(--text-dark);
-                             font-size:.68rem;font-weight:700;padding:.25rem .6rem;border-radius:100px;
+                             font-size:var(--fs-xs);font-weight:700;padding:.25rem .6rem;border-radius:100px;
                              box-shadow:var(--shadow-sm);display:inline-flex;align-items:center;gap:.3rem;">
                     📦 Package Deal
                 </span>
@@ -42,7 +42,7 @@
                             border-radius:var(--radius-md);padding:.4rem .65rem;text-align:center;box-shadow:var(--shadow-md);
                             line-height:1;">
                     <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;">{{ $package->pax }}</div>
-                    <div style="font-size:.6rem;text-transform:uppercase;letter-spacing:.05em;opacity:.85;">pax</div>
+                    <div style="font-size:var(--fs-xs);text-transform:uppercase;letter-spacing:.05em;opacity:.85;">pax</div>
                 </div>
                 @if($package->image)
                     <img src="{{ asset('storage/' . $package->image) }}" alt="{{ $package->name }}">
@@ -51,12 +51,18 @@
                 @endif
             </div>
             <div class="menu-card-body">
-                <div class="menu-card-name">{{ $package->name }}</div>
+                <a href="{{ route('customer.packages.show', $package->id) }}" class="menu-card-name menu-card-link">{{ $package->name }}</a>
+                <div class="cj-pkg-rating">
+                    <x-rating-badge :stats="$ratingStats[$package->id] ?? null" />
+                    <a href="{{ route('customer.packages.show', $package->id) }}#reviews-heading" class="cj-pkg-reviews-link">
+                        {{ isset($ratingStats[$package->id]) ? 'Read reviews' : 'Details' }} →
+                    </a>
+                </div>
                 <div class="menu-card-desc">{{ $package->description }}</div>
 
                 @if($package->menuItems->isNotEmpty())
                     <div style="margin-bottom:.6rem;">
-                        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+                        <div style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.04em;
                                     color:var(--green-dark);margin-bottom:.35rem;display:flex;align-items:center;gap:.35rem;">
                             <i class="bi bi-check2-circle"></i> What's Included
                         </div>
@@ -73,7 +79,7 @@
 
                 @if($package->utensils->isNotEmpty())
                     <div style="margin-bottom:.75rem;">
-                        <div style="font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:.04em;
+                        <div style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase;letter-spacing:.04em;
                                     color:var(--text-mid);margin-bottom:.35rem;display:flex;align-items:center;gap:.35rem;">
                             <i class="bi bi-tools"></i> Equipment Provided
                         </div>
@@ -395,6 +401,11 @@
 
     @if($errors->any())
         new bootstrap.Modal(modal).show();
+    @elseif(request()->filled('avail'))
+        // From a package's own page ("Avail this package"): open its modal
+        // the same way tapping its button here would (skipped if disabled).
+        const availButton = document.querySelector('button[data-package-id="' + {{ \Illuminate\Support\Js::from((int) request('avail')) }} + '"]');
+        if (availButton && !availButton.disabled) availButton.click();
     @endif
 
     const phoneInput = document.getElementById('avail-contact-number');

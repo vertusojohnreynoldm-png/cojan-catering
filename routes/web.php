@@ -146,6 +146,9 @@ Route::middleware(['auth', 'role:customer'])->prefix('customer')->name('customer
 
     // Packages
     Route::get('/packages', [PackageController::class, 'index'])->name('packages.index');
+    // One package: details + ratings & reviews. Numeric only, so it never
+    // shadows /packages/checkout.
+    Route::get('/packages/{id}', [PackageController::class, 'show'])->whereNumber('id')->name('packages.show');
 
     // Package booking (Avail flow) — separate from the regular cart checkout.
     // 'verified' gates the actual booking actions, not browsing the package

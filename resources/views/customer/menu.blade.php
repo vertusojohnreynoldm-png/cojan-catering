@@ -40,15 +40,16 @@
     @forelse($menuItems as $item)
     <div class="col-6 col-lg-4">
         <div class="menu-card" style="{{ $orderingOpen ? '' : 'opacity:.6;' }}">
-            <div class="menu-card-img">
+            <a href="{{ route('customer.menu.show', $item->id) }}" class="menu-card-img" tabindex="-1" aria-hidden="true">
                 @if($item->image)
-                    <img src="{{ asset('storage/' . $item->image) }}" alt="{{ $item->name }}">
+                    <img src="{{ asset('storage/' . $item->image) }}" alt="">
                 @else
                     <span>🍽 No Image</span>
                 @endif
-            </div>
+            </a>
             <div class="menu-card-body">
-                <div class="menu-card-name">{{ $item->name }}</div>
+                <a href="{{ route('customer.menu.show', $item->id) }}" class="menu-card-name menu-card-link">{{ $item->name }}</a>
+                <x-rating-badge :stats="$ratingStats[$item->id] ?? null" class="mb-1" />
                 <div class="menu-card-desc">{{ $item->description }}</div>
                 <div class="menu-card-price">₱{{ number_format($item->price, 2) }}</div>
                 <form method="POST" action="{{ route('customer.cart.add') }}">

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\RatingStats;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -44,6 +45,24 @@ class Feedback extends Model
         'hidden_at' => 'datetime',
         'replied_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        // Any change (new rating, edit, hide/unhide, delete) refreshes the
+        // cached averages once it's committed.
+        static::saved(fn () => RatingStats::forgetAfterCommit());
+        static::deleted(fn () => RatingStats::forgetAfterCommit());
+    }
+
+    /** "Juan D." — reviews show a first name and initial, never the full name. */
+    public function reviewerName(): string
+    {
+        $parts = preg_split('/\s+/', trim((string) $this->user?->name));
+        $first = $parts[0] ?? '';
+        $initial = count($parts) > 1 ? ' ' . mb_strtoupper(mb_substr(end($parts), 0, 1)) . '.' : '';
+
+        return $first !== '' ? $first . $initial : 'A customer';
+    }
 
     public function user()
     {
